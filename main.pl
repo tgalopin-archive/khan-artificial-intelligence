@@ -1,5 +1,6 @@
-% Ask user
-askUser(E, X) :- write(E), nl, read(X).
+% Get a specific element from a list
+ith(0, [L|Q], L) :- !.
+ith(N, [_|Q], L) :- M is N-1, ith(M, Q, L).
 
 % Initialize the board
 initBoard(1, [ [2,1,3,2,2,1], [2,3,1,3,1,3], [3,1,2,1,3,2], [1,3,2,3,1,2], [2,1,3,1,3,1], [2,3,1,2,2,3] ]).
@@ -8,12 +9,8 @@ initBoard(3, [ [2,3,1,2,2,3], [2,1,3,1,3,1], [1,3,2,3,1,2], [3,1,2,1,3,2], [2,3,
 initBoard(4, [ [2,3,1,2,2,3], [2,1,3,1,3,1], [1,3,2,3,1,2], [3,1,2,1,3,2], [2,3,1,3,1,3], [2,1,3,2,2,1] ]). % TODO
 
 % Possibles pieces
-piece(sr1).
-piece(sr2).
-piece(sr3).
-piece(sr4).
-piece(sr5).
-piece(kr).
+pieces([sr1,sr2,sr3,sr4,sr5,kr,so1,so2,so3,so4,so5,ko]).
+isPiece(P) :- pieces(A), member(P, A).
 
 % Display the board
 displayRow([]).
@@ -30,26 +27,42 @@ replace([H|T], I, X, [H|R]):- I > -1, NI is I-1, replace(T, NI, X, R), !.
 replace(L, _, _, L).
 
 % Replace the piece is place occupied
-addPiece(L2,Pie, L3) :- length(L2,2),nth0(0,L2,L2A), append([L2A],Pie,L3),!.
+addPiece(L2,Pie, L3) :- length(L2,2), ith(0,L2,L2A), append([L2A],Pie,L3),!.
 
 % Add the piece is place free
 addPiece(L2, Pie, L3) :- append([L2],Pie,L3),!.
 
 % Move a piece
-movePiece(Pie,X,Y,NP, NP2) :-
-	board(Z),
-	Z = NP,
-	nth0(X, Z, L1),
-	nth0(Y, L1, L2),
-	addPiece(L2, Pie, L3),
+movePiece(S, P, X, Y, B, NB) :-
+	initBoard(S, Z),
+	Z = B,
+	ith(X, Z, L1),
+	ith(Y, L1, L2),
+	addPiece(L2, P, L3),
 	replace(L1, Y, L3, L4),
-	replace(Z, X, L4, NP2).
-movePiece(Pie,X,Y,NP, NP2) :-
-	nth0(X, NP, L1),
-	nth0(Y, L1, L2),
-	addPiece(L2, Pie, L3),
+	replace(Z, X, L4, NB).
+movePiece(S, P, X, Y, B, NB) :-
+	ith(X, B, L1),
+	ith(Y, L1, L2),
+	addPiece(L2, P, L3),
 	replace(L1, Y, L3, L4),
-	replace(NP, X, L4, NP2).
+	replace(B, X, L4, NB).
+
+% Ask where to put pieces
+askInitialPiece(_, [], _, _).
+askInitialPiece(S, [L|Q], B, NB) :-
+	nl, write('Coordonnées de la pièce '), write(L), write(' : '), nl,
+	read(X),
+	read(Y),
+	movePiece(S, L, X, Y, B, TB),
+	nl,
+	displayBoard(TB),
+	askInitialPiece(S, Q, TB, NB).
+
+askInitialPieces(S, B, NB) :-
+	pieces(A),
+	askInitialPiece(S, A, B, NB).
+
 
 % Main process
 main(_) :-
@@ -58,9 +71,13 @@ main(_) :-
 	initBoard(2, I),
 	displayBoard(I),
 	nl, nl,
-	askUser('Quelle position souhaitez-vous avoir ? (1 : haut, 2 : bas, 3 : gauche, 4 : droite):', S),
-	initBoard(S, X),
-	displayBoard(X).
+	write('Quelle position souhaitez-vous avoir ? (1 : haut, 2 : bas, 3 : gauche, 4 : droite):'),
+	nl,
+	read(S),
+	initBoard(S, B),
+	displayBoard(B),
+	askInitialPieces(S, B, NB),
+	displayBoard(NB).
 
 
 
