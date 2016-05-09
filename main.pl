@@ -36,8 +36,20 @@ addPiece(L2,Pie, L3) :- length(L2,2),nth0(0,L2,L2A), append([L2A],Pie,L3),!.
 addPiece(L2, Pie, L3) :- append([L2],Pie,L3),!.
 
 % Move a piece
-movePiece(Pie,X,Y,NP, NP2) :- board(Z), Z = NP, nth0(X, Z, L1), nth0(Y, L1, L2), addPiece(L2, Pie, L3), replace(L1, Y, L3, L4), replace(Z, X, L4, NP2).
-movePiece(Pie,X,Y,NP, NP2) :- nth0(X, NP, L1), nth0(Y, L1, L2), addPiece(L2, Pie, L3), replace(L1, Y, L3, L4), replace(NP, X, L4, NP2).
+movePiece(Pie,X,Y,NP, NP2) :-
+	board(Z),
+	Z = NP,
+	nth0(X, Z, L1),
+	nth0(Y, L1, L2),
+	addPiece(L2, Pie, L3),
+	replace(L1, Y, L3, L4),
+	replace(Z, X, L4, NP2).
+movePiece(Pie,X,Y,NP, NP2) :-
+	nth0(X, NP, L1),
+	nth0(Y, L1, L2),
+	addPiece(L2, Pie, L3),
+	replace(L1, Y, L3, L4),
+	replace(NP, X, L4, NP2).
 
 % Main process
 main(_) :-
