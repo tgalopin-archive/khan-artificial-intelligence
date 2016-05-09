@@ -41,8 +41,8 @@ show_rows([L|Q]) :-   show_row(L), nl, write('-----------'), nl,show_rows(Q).
 show_board(P) :- show_rows(P).
 
 % déplace un pion
-move(Pie,X,Y,NP, NP2) :- board(Z), Z = NP, nth0(X,Z,L1), nth0(Y,L1,L2),add_piece(L2, Pie, L3), replace(L1,Y,L3,L4),replace(Z,X,L4,NP).
-move(Pie,X,Y,NP, NP2) :- board(Z), nth0(X,Z,L1), nth0(Y,L1,L2),add_piece(L2, Pie, L3), replace(L1,Y,L3,L4),replace(Z,X,L4,NP).
+move(Pie,X,Y,NP, NP2) :- board(Z), Z = NP, nth0(X,Z,L1), nth0(Y,L1,L2),add_piece(L2, Pie, L3), replace(L1,Y,L3,L4),replace(Z,X,L4,NP2).
+move(Pie,X,Y,NP, NP2) :- nth0(X,NP,L1), nth0(Y,L1,L2),add_piece(L2, Pie, L3), replace(L1,Y,L3,L4),replace(NP,X,L4,NP2).
 
 
 % place([T|[]]) :- write(T), write(' = (X,Y)'), nl, read(X), read(Y), move(T,X,Y,).
