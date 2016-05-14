@@ -3,10 +3,10 @@ ith(0, [L|Q], L) :- !.
 ith(N, [_|Q], L) :- M is N-1, ith(M, Q, L).
 
 % Initialize the board
-initBoard(1, [ [2,1,3,2,2,1], [2,3,1,3,1,3], [3,1,2,1,3,2], [1,3,2,3,1,2], [2,1,3,1,3,1], [2,3,1,2,2,3] ]).
+initBoard(1, [ [1,2,2,3,1,2], [3,1,3,1,3,2], [2,3,1,2,1,3], [2,1,3,2,3,1], [1,3,1,3,1,2], [3,2,2,1,3,2] ]).
 initBoard(2, [ [2,3,1,2,2,3], [2,1,3,1,3,1], [1,3,2,3,1,2], [3,1,2,1,3,2], [2,3,1,3,1,3], [2,1,3,2,2,1] ]).
-initBoard(3, [ [2,3,1,2,2,3], [2,1,3,1,3,1], [1,3,2,3,1,2], [3,1,2,1,3,2], [2,3,1,3,1,3], [2,1,3,2,2,1] ]). % TODO
-initBoard(4, [ [2,3,1,2,2,3], [2,1,3,1,3,1], [1,3,2,3,1,2], [3,1,2,1,3,2], [2,3,1,3,1,3], [2,1,3,2,2,1] ]). % TODO
+initBoard(3, [ [3,1,2,2,3,1], [2,3,1,3,1,2], [2,1,3,1,3,2], [1,3,2,2,1,3], [3,1,3,1,3,1], [2,2,1,3,2,2] ]).
+initBoard(4, [ [2,2,3,1,2,2], [1,3,1,3,1,3], [3,1,2,2,3,1], [2,3,1,3,1,2], [2,1,3,1,3,2], [1,3,2,2,1,3] ]).
 
 % Possibles pieces
 pieces([sr1,sr2,sr3,sr4,sr5,kr,so1,so2,so3,so4,so5,ko]).
@@ -26,22 +26,18 @@ replace([_|T], 0, X, [X|T]).
 replace([H|T], I, X, [H|R]):- I > -1, NI is I-1, replace(T, NI, X, R), !.
 replace(L, _, _, L).
 
+% Check if case occupied
+occupied(X,Y, B) :- ith(X, B, L1), ith(Y, L1, L2), length(L2,2).
+
+
 % Replace the piece is place occupied
-addPiece(L2,Pie, L3) :- length(L2,2), ith(0,L2,L2A), append([L2A],Pie,L3),!.
+addPiece(L2,Pie, L3) :- length(L2,2), ith(0,L2,L2A), append([L2A],[Pie],L3),!.
 
 % Add the piece is place free
-addPiece(L2, Pie, L3) :- append([L2],Pie,L3),!.
+addPiece(L2, Pie, L3) :- append([L2],[Pie],L3),!.
 
 % Move a piece
-movePiece(S, P, X, Y, B, NB) :-
-	initBoard(S, Z),
-	Z = B,
-	ith(X, Z, L1),
-	ith(Y, L1, L2),
-	addPiece(L2, P, L3),
-	replace(L1, Y, L3, L4),
-	replace(Z, X, L4, NB).
-movePiece(S, P, X, Y, B, NB) :-
+movePiece(P, X, Y, B, NB) :-
 	ith(X, B, L1),
 	ith(Y, L1, L2),
 	addPiece(L2, P, L3),
@@ -49,19 +45,21 @@ movePiece(S, P, X, Y, B, NB) :-
 	replace(B, X, L4, NB).
 
 % Ask where to put pieces
-askInitialPiece(_, [], _, _).
-askInitialPiece(S, [L|Q], B, NB) :-
+askInitialPiece([], _, _).
+askInitialPiece([L|Q], B, NB) :-
 	nl, write('Coordonnées de la pièce '), write(L), write(' : '), nl,
 	read(X),
 	read(Y),
-	movePiece(S, L, X, Y, B, TB),
-	nl,
-	displayBoard(TB),
-	askInitialPiece(S, Q, TB, NB).
+    (occupied(X,Y, B)
+        ->  askInitialPiece([L|Q], B, NB)
+        ;   movePiece(L, X, Y, B, TB),
+            nl,
+            displayBoard(TB),
+            askInitialPiece(Q, TB, NB)).
 
-askInitialPieces(S, B, NB) :-
+askInitialPieces(B, NB) :-
 	pieces(A),
-	askInitialPiece(S, A, B, NB).
+	askInitialPiece(A, B, NB).
 
 
 % Main process
@@ -71,14 +69,13 @@ main(_) :-
 	initBoard(2, I),
 	displayBoard(I),
 	nl, nl,
-	write('Quelle position souhaitez-vous avoir ? (1 : haut, 2 : bas, 3 : gauche, 4 : droite):'),
+	write('Quelle position souhaitez-vous avoir ? (1 : Nord, 2 : Sud(actuel), 3 : Ouest, 4 : Est):'),
 	nl,
 	read(S),
 	initBoard(S, B),
 	displayBoard(B),
-	askInitialPieces(S, B, NB),
+	askInitialPieces(B, NB),
 	displayBoard(NB).
-
 
 
 
