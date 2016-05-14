@@ -3,10 +3,10 @@ ith(0, [L|Q], L) :- !.
 ith(N, [_|Q], L) :- M is N-1, ith(M, Q, L).
 
 % Initialize the board
-initBoard(1, [ [1,2,2,3,1,2], [3,1,3,1,3,2], [2,3,1,2,1,3], [2,1,3,2,3,1], [1,3,1,3,1,2], [3,2,2,1,3,2] ]).
-initBoard(2, [ [2,3,1,2,2,3], [2,1,3,1,3,1], [1,3,2,3,1,2], [3,1,2,1,3,2], [2,3,1,3,1,3], [2,1,3,2,2,1] ]).
-initBoard(3, [ [3,1,2,2,3,1], [2,3,1,3,1,2], [2,1,3,1,3,2], [1,3,2,2,1,3], [3,1,3,1,3,1], [2,2,1,3,2,2] ]).
-initBoard(4, [ [2,2,3,1,2,2], [1,3,1,3,1,3], [3,1,2,2,3,1], [2,3,1,3,1,2], [2,1,3,1,3,2], [1,3,2,2,1,3] ]).
+board(1, [ [1,2,2,3,1,2], [3,1,3,1,3,2], [2,3,1,2,1,3], [2,1,3,2,3,1], [1,3,1,3,1,2], [3,2,2,1,3,2] ]).
+board(2, [ [2,3,1,2,2,3], [2,1,3,1,3,1], [1,3,2,3,1,2], [3,1,2,1,3,2], [2,3,1,3,1,3], [2,1,3,2,2,1] ]).
+board(3, [ [3,1,2,2,3,1], [2,3,1,3,1,2], [2,1,3,1,3,2], [1,3,2,2,1,3], [3,1,3,1,3,1], [2,2,1,3,2,2] ]).
+board(4, [ [2,2,3,1,2,2], [1,3,1,3,1,3], [3,1,2,2,3,1], [2,3,1,3,1,2], [2,1,3,1,3,2], [1,3,2,2,1,3] ]).
 
 % Possibles pieces
 pieces([sr1,sr2,sr3,sr4,sr5,kr,so1,so2,so3,so4,so5,ko]).
@@ -48,7 +48,7 @@ movePiece(P, X, Y, B, NB) :-
 askInitialPiece([], _, _).
 askInitialPiece([L|Q], B, NB) :-
 	nl, write('Coordonnées de la pièce '), write(L), write(' : '), nl,
-	read(X),
+    read(X),
 	read(Y),
     (occupied(X,Y, B)
         ->  askInitialPiece([L|Q], B, NB)
@@ -61,21 +61,25 @@ askInitialPieces(B, NB) :-
 	pieces(A),
 	askInitialPiece(A, B, NB).
 
+initBoard(NB) :-
+    write('Position initiale :'),
+    nl,
+    board(2, I),
+    displayBoard(I),
+    nl, nl,
+    write('Quelle position souhaitez-vous avoir ? (1 : Nord, 2 : Sud(actuel), 3 : Ouest, 4 : Est):'),
+    nl,
+    read(S),
+    board(S, B),
+    displayBoard(B),
+    askInitialPieces(B, NB).
+
 
 % Main process
 main(_) :-
-	write('Position initiale :'),
-	nl,
-	initBoard(2, I),
-	displayBoard(I),
-	nl, nl,
-	write('Quelle position souhaitez-vous avoir ? (1 : Nord, 2 : Sud(actuel), 3 : Ouest, 4 : Est):'),
-	nl,
-	read(S),
-	initBoard(S, B),
-	displayBoard(B),
-	askInitialPieces(B, NB),
-	displayBoard(NB).
+    initBoard(NB),
+
+	displayBoard(NB),!.
 
 
 
