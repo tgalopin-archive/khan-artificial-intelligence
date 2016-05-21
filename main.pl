@@ -12,8 +12,10 @@ board(3, [ [3,1,2,2,3,1], [2,3,1,3,1,2], [2,1,3,1,3,2], [1,3,2,2,1,3], [3,1,3,1,
 board(4, [ [2,2,3,1,2,2], [1,3,1,3,1,3], [3,1,2,2,3,1], [2,3,1,3,1,2], [2,1,3,1,3,2], [1,3,2,2,1,3] ]).
 
 % Possibles pieces
-pieces([sr1,sr2,sr3,sr4,sr5,kr,so1,so2,so3,so4,so5,ko]).
-isPiece(P) :- pieces(A), member(P, A), !.
+pieces(j1,[sr1,sr2,sr3,sr4,sr5,kr]).
+pieces(j2,[so1,so2,so3,so4,so5,ko]).
+isPiece(j1,P) :- pieces(j1,A), member(P, A), !.
+isPiece(j2,P) :- pieces(j2,B), member(P, B), !.
 
 % Display the board
 displayRow([]) :- !.
@@ -25,13 +27,17 @@ displayRows([L|Q]) :- write(' -------------------------'), nl, displayRow(L), nl
 
 displayBoard(P) :- displayRows(P).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % Replace the element i from the the list T by X and return result in [X|T]
 replace([_|T], 0, X, [X|T]).
 replace([H|T], I, X, [H|R]):- I > -1, NI is I-1, replace(T, NI, X, R), !.
 replace(L, _, _, L).
 
 % Check if case occupied
-occupied(X,Y, B) :- ith(X, B, L1), ith(Y, L1, L2), length(L2,2).
+% occupied([X,Y], B) :- ith(X, B, L1), ith(Y, L1, L2), length(L2,2).
+occupied([X,Y],B):- ith(X, B, L1), occupiedOnLine(Y,L1).
+occupiedOnLine(Y,L):- ith(Y, L, L2), length(L2,2).
 
 
 % Replace the piece is place occupied
@@ -48,36 +54,41 @@ movePiece(P, X, Y, B, NB, AP) :-
 	replace(L1, Y, L3, L4),
 	replace(B, X, L4, NB), !.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % Ask where to put pieces
-askInitialPiece([], _, _).
+askInitialPiece([], _, _):-!.
 askInitialPiece([L|Q], B, NB) :-
 	nl, write('Coordonnées de la pièce '), write(L), write(' : '), nl,
     read(X),
 	read(Y),
-    (occupied(X,Y, B)
+    (occupied([X,Y], B)
         ->  askInitialPiece([L|Q], B, NB)
         ;   movePiece(L, X, Y, B, TB, AP),
             nl,
-            displayBoard(TB),
+            % displayBoard(TB),
             askInitialPiece(Q, TB, NB)
     ).
 
-askInitialPieces(B, NB) :-
-	pieces(A),
+askInitialPieces(Joueur,B, NB) :-
+    pieces(Joueur, A), write(A),
 	askInitialPiece(A, B, NB).
 
-initBoard(NB) :-
+initBoard(NB2) :-
     write('Position initiale :'),
     nl,
-    board(2, I),
-    displayBoard(I),
+    % board(2, I),
+    % displayBoard(I),
     nl, nl,
     write('Quelle position souhaitez-vous avoir ? (1 : Nord, 2 : Sud(actuel), 3 : Ouest, 4 : Est):'),
     nl,
     read(S),
     board(S, B),
-    displayBoard(B),
-    askInitialPieces(B, NB).
+    % displayBoard(B),
+    askInitialPieces(j1, B, NB1), % il ne comprend pas qu'il faut stocker dans NB1'
+    displayBoard(NB1),
+     askInitialPieces(j2, NB1, NB2).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Delete an element from a list
 del(X,[X|Q], Q) :-!.
@@ -98,7 +109,7 @@ selectMove(J, X, Y, B, NB, AP) :-
     nl,
     write('Quelle pièce voulez-vous jouer ?'),
     read(P),
-    (\+ isPiece(P)
+    (\+ isPiece(J,P)
         ->  write('Pièce invalide'),
             selectMove(J, X, Y, B, NB, AP)
         ;   % displayBoard(B),
@@ -112,16 +123,72 @@ selectMove(J, X, Y, B, NB, AP) :-
             movePiece(P, X, Y, TB, NB, AP)
     ).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+moveUp(OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX - 1, NewY is ActualY, \+ member([NewX, NewY], OldPos), append(OldPos, [[ActualX,ActualY]], OldActualPos).
+moveDown(OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX + 1, NewY is ActualY, \+ member([NewX, NewY], OldPos), append(OldPos, [[ActualX,ActualY]], OldActualPos).
+moveLeft(OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX, NewY is ActualY - 1, \+ member([NewX, NewY], OldPos), append(OldPos, [[ActualX,ActualY]], OldActualPos).
+moveRight(OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX, NewY is ActualY + 1, \+ member([NewX, NewY], OldPos), append(OldPos, [[ActualX,ActualY]], OldActualPos).
+
+place(I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 = 0, moveUp(OldPos,ActualPos, NewPos, AllOldOldPos), allowedPlace(NewPos).
+place(I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 = 0, moveDown(OldPos,ActualPos, NewPos, AllOldOldPos), allowedPlace(NewPos).
+place(I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 = 0, moveLeft(OldPos,ActualPos, NewPos, AllOldOldPos), allowedPlace(NewPos).
+place(I,  Board,OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 = 0, moveRight(OldPos,ActualPos, NewPos, AllOldOldPos), allowedPlace(NewPos), !.
+
+% place(I, OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 > 0, !.
+
+place(I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- moveUp(OldPos,ActualPos, NewActualPos, AllOldPos),allowedPlace(NewActualPos), \+ occupied(NewActualPos, Board), I1 is I-1,  place(I1,Board, AllOldPos,NewActualPos, NewPos, AllOldOldPos).
+place(I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- moveDown(OldPos,ActualPos, NewActualPos, AllOldPos), allowedPlace(NewActualPos), \+ occupied(NewActualPos, Board),I1 is I-1, place(I1,Board, AllOldPos,NewActualPos, NewPos, AllOldOldPos).
+place(I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- moveLeft(OldPos,ActualPos, NewActualPos, AllOldPos),allowedPlace(NewActualPos), \+ occupied(NewActualPos, Board), I1 is I-1, place(I1,Board, AllOldPos,NewActualPos, NewPos,AllOldOldPos).
+place(I, Board,OldPos,ActualPos, NewPos, AllOldOldPos):- moveRight(OldPos,ActualPos, NewActualPos, AllOldPos), allowedPlace(NewActualPos), \+ occupied(NewActualPos, Board), I1 is I-1, place(I1,Board, AllOldPos,NewActualPos, NewPos, AllOldOldPos).
 
 
-% Main process
+% remove duplication
+filtrate([],[]).
+filtrate([H|T], WithoutDup) :- member(H,T), filtrate(T,WithoutDup),!.
+filtrate([H|T], [H|WithoutDup]) :- \+ member(H,T),filtrate(T,WithoutDup).
+
+
+% get the pieces on the board at the moment, with the value of the box and the coordinates
+getPiecesOnLine([],[],_,_):-!.
+getPiecesOnLine([H|T],[L|PList],X,Y):- Y1 is Y+1, occupiedOnLine(0,[H|T]), append(H,[X,Y],L),
+    % ith(1,H,L), % only piece
+    getPiecesOnLine(T,PList, X,Y1),
+    !.
+getPiecesOnLine([H|T],PList, X,Y):- Y1 is Y+1, getPiecesOnLine(T,PList,X,Y1).
+
+getPiecesOnBoard(Player, [], [],_,_):-!.
+getPiecesOnBoard(Player, [H|T], BPList,X,Y ):- X1 is X+1, getPiecesOnBoard(Player,T,LPList,X1,Y),getPiecesOnLine(H,L,X1,Y), append(L,LPList, BPList).
+
+
+% TODO
+possibleMoves(_,[],_).
+possibleMoves(Player, Board,PossibleMoveList) :-
+    getPiecesOnBoard(Player, Board, PList,0,0), % PList = [val, piece, X, Y]
+    findall(FinalPositions, FinalList), %finalList = []
+    filtrate(FinalList, PossibleMoveList).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Main process
 main(_) :-
     testBoard(B),
-    % initBoard(B),
-	displayBoard(B),
-    selectMove('J1', X, Y, B, NB, AP),
-    displayBoard(NB).
+    % initBoard(B), !,
+	displayBoard(B),nl,
+    write('Joueur1 ->'),
+    selectMove(j1, X, Y, B, NB1, AP1),!, nl,
+    displayBoard(NB),
+    write('Joueur2 ->'),
+    selectMove(j2, W, Z, NB1, NB2, AP2),
+    displayBoard(NB2).
 
+test(_):- initBoard(B), displayBoard(B). % fonctionnne pas
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+allowedPlace([X,Y]):- X > -1, Y > -1, X < 6, Y < 6.
+
+allowedMove([Piece, I, X,Y],[X1,Y1]):- moveUp([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
+allowedMove([Piece, I, X,Y],[X1,Y1]):- moveDown([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
+allowedMove([Piece, I, X,Y],[X1,Y1]):- moveLeft([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
+allowedMove([Piece, I, X,Y],[X1,Y1]):- moveRight([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
 
 
 % Idées:
