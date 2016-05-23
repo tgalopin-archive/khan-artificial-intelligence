@@ -1,5 +1,5 @@
 % to test
-% testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kr],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,[1,ko],3,1,3,1],  [2,2,1,3,2,2]]).
+testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kr],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,[1,ko],3,1,3,1],  [2,2,1,3,2,2]]).
 
 % Get a specific element from a list
 ith(0, [L|Q], L) :- !.
@@ -130,6 +130,7 @@ selectMove(J, X, Y, B, NB, AP) :-
             movePiece(P, X, Y, TB, NB, AP)
     ).
 
+% TODO Vérifier que ca bouffe pas une piÈce de son propre camp
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 moveUp(OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX - 1, NewY is ActualY, \+ member([NewX, NewY], OldPos), append(OldPos, [[ActualX,ActualY]], OldActualPos).
 moveDown(OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX + 1, NewY is ActualY, \+ member([NewX, NewY], OldPos), append(OldPos, [[ActualX,ActualY]], OldActualPos).
@@ -165,23 +166,24 @@ getPiecesOnLine(Player,[H|T],[L|PList],X,Y):- Y1 is Y+1, occupiedOnLine(0,[H|T])
 getPiecesOnLine(Player,[H|T],PList, X,Y):- Y1 is Y+1, getPiecesOnLine(Player,T,PList,X,Y1).
 
 getPiecesOnBoard(Player, [], [],_,_):-!.
-getPiecesOnBoard(Player, [H|T], BPList,X,Y ):- X1 is X+1, getPiecesOnBoard(Player,T,LPList,X1,Y),getPiecesOnLine(Player,H,L,X1,Y), append(L,LPList, BPList).
+getPiecesOnBoard(Player, [H|T], BPList,X,Y ):- getPiecesOnBoard(Player,T,LPList,X,Y),X1 is X+1,getPiecesOnLine(Player,H,L,X1,Y), append(L,LPList, BPList).
 
-% getCoordinates([_,_, X,Y], [X,Y]).
 concatElementList(L,[],[]):-!.
 concatElementList([X,Y],[H|T],[[H,X,Y]|L2]):- concatElementList([X,Y],T,L2).
 
-getAllMoves([[Val,Piece, X,Y]|T], Board,AllMoves):-
-    findall(L1,place(3,Board,[X,Y],L1,L2),R), filtrate(R,R1),
-    concatElementList([Val,Piece],L2,L3).
+% get all possible moves for each piece
+getAllMoves([],Board,[]):-!.
+getAllMoves([[Val,Piece, X,Y]|T], Board,[AllMoves1Piece|AllMoves]):-
+    findall(L1,place(Val,Board,[],[X,Y],L1,L2),R), filtrate(R,R1),
+    concatElementList([Val,Piece],R1,AllMoves1Piece),
+    getAllMoves(T,Board,AllMoves).
 
 
-% TODO
-possibleMoves(_,[],_).
+
+% get all possible moves for all the pieces
 possibleMoves(Player, Board,PossibleMoveList) :-
     getPiecesOnBoard(Player, Board, PList,0,0), % PList = [val, piece, X, Y]
-    findall(FinalPositions, FinalList), %finalList = []
-    filtrate(FinalList, PossibleMoveList).
+    getAllMoves(PList,Board,PossibleMoveList).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Main process
