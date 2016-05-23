@@ -57,17 +57,22 @@ movePiece(P, X, Y, B, NB, AP) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Ask where to put pieces
-askInitialPiece([], _, _):-!.
+askInitialPiece([], B, B):-!.
 askInitialPiece([L|Q], B, NB) :-
+    write(B),
 	nl, write('Coordonnées de la pièce '), write(L), write(' : '), nl,
     read(X),
 	read(Y),
     (occupied([X,Y], B)
         ->  askInitialPiece([L|Q], B, NB)
-        ;   movePiece(L, X, Y, B, TB, AP),
-            nl,
-            % displayBoard(TB),
-            askInitialPiece(Q, TB, NB)
+        ;
+        % write('liste1'), write(B),
+        displayBoard(B),
+        % write('liste2'), write(B),
+           movePiece(L, X, Y, B, TB, AP),
+            % nl, write(B),
+            displayBoard(TB),
+            askInitialPiece(Q, TB, NB) % , write(NB)
     ).
 
 askInitialPieces(Joueur,B, NB) :-
@@ -77,17 +82,19 @@ askInitialPieces(Joueur,B, NB) :-
 initBoard(NB2) :-
     write('Position initiale :'),
     nl,
-    % board(2, I),
-    % displayBoard(I),
+    board(2, I),
+    displayBoard(I),
     nl, nl,
     write('Quelle position souhaitez-vous avoir ? (1 : Nord, 2 : Sud(actuel), 3 : Ouest, 4 : Est):'),
     nl,
     read(S),
     board(S, B),
-    % displayBoard(B),
+    displayBoard(B),
     askInitialPieces(j1, B, NB1), % il ne comprend pas qu'il faut stocker dans NB1'
-    displayBoard(NB1),
-     askInitialPieces(j2, NB1, NB2).
+    write(NB1),
+displayBoard(B),
+     askInitialPieces(j2, B, NB2)
+.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Delete an element from a list
@@ -149,15 +156,24 @@ filtrate([H|T], [H|WithoutDup]) :- \+ member(H,T),filtrate(T,WithoutDup).
 
 
 % get the pieces on the board at the moment, with the value of the box and the coordinates
-getPiecesOnLine([],[],_,_):-!.
-getPiecesOnLine([H|T],[L|PList],X,Y):- Y1 is Y+1, occupiedOnLine(0,[H|T]), append(H,[X,Y],L),
-    % ith(1,H,L), % only piece
-    getPiecesOnLine(T,PList, X,Y1),
+getPiecesOnLine(Player,[],[],_,_):-!.
+getPiecesOnLine(Player,[H|T],[L|PList],X,Y):- Y1 is Y+1, occupiedOnLine(0,[H|T]),
+    ith(1,H,TL), isPiece(Player,TL), % only piece
+    append(H,[X,Y],L),
+    getPiecesOnLine(Player,T,PList, X,Y1),
     !.
-getPiecesOnLine([H|T],PList, X,Y):- Y1 is Y+1, getPiecesOnLine(T,PList,X,Y1).
+getPiecesOnLine(Player,[H|T],PList, X,Y):- Y1 is Y+1, getPiecesOnLine(Player,T,PList,X,Y1).
 
 getPiecesOnBoard(Player, [], [],_,_):-!.
-getPiecesOnBoard(Player, [H|T], BPList,X,Y ):- X1 is X+1, getPiecesOnBoard(Player,T,LPList,X1,Y),getPiecesOnLine(H,L,X1,Y), append(L,LPList, BPList).
+getPiecesOnBoard(Player, [H|T], BPList,X,Y ):- X1 is X+1, getPiecesOnBoard(Player,T,LPList,X1,Y),getPiecesOnLine(Player,H,L,X1,Y), append(L,LPList, BPList).
+
+% getCoordinates([_,_, X,Y], [X,Y]).
+concatElementList(L,[],[]):-!.
+concatElementList([X,Y],[H|T],[[H,X,Y]|L2]):- concatElementList([X,Y],T,L2).
+
+getAllMoves([[Val,Piece, X,Y]|T], Board,AllMoves):-
+    findall(L1,place(3,Board,[X,Y],L1,L2),R), filtrate(R,R1),
+    concatElementList([Val,Piece],L2,L3).
 
 
 % TODO
@@ -171,7 +187,7 @@ possibleMoves(Player, Board,PossibleMoveList) :-
 %% Main process
 main(_) :-
     testBoard(B),
-    % initBoard(B), !,
+    % initBoard(B),
 	displayBoard(B),nl,
     write('Joueur1 ->'),
     selectMove(j1, X, Y, B, NB1, AP1),!, nl,
