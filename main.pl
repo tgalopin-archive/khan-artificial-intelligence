@@ -1,5 +1,5 @@
 % to test
-testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kr],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,[1,ko],3,1,3,1],  [2,2,1,3,2,2]]).
+% testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kr],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,[1,ko],3,1,3,1],  [2,2,1,3,2,2]]).
 
 % Get a specific element from a list
 ith(0, [L|Q], L) :- !.
@@ -65,14 +65,10 @@ askInitialPiece([L|Q], B, NB) :-
 	read(Y),
     (occupied([X,Y], B)
         ->  askInitialPiece([L|Q], B, NB)
-        ;
-        % write('liste1'), write(B),
-        displayBoard(B),
-        % write('liste2'), write(B),
-           movePiece(L, X, Y, B, TB, AP),
-            % nl, write(B),
+        ;   movePiece(L, X, Y, B, TB, AP),
+            nl,
             displayBoard(TB),
-            askInitialPiece(Q, TB, NB) % , write(NB)
+            askInitialPiece(Q, TB, NB)
     ).
 
 askInitialPieces(Joueur,B, NB) :-
@@ -90,11 +86,15 @@ initBoard(NB2) :-
     read(S),
     board(S, B),
     displayBoard(B),
-    askInitialPieces(j1, B, NB1), % il ne comprend pas qu'il faut stocker dans NB1'
-    write(NB1),
-displayBoard(B),
-     askInitialPieces(j2, B, NB2)
-.
+    nl,
+    write('Joueur1 ->'),
+    nl,
+    askInitialPieces(j1, B, NB1),
+    nl,
+    write('Joueur2 ->'),
+    nl,
+    askInitialPieces(j2, NB1, NB2).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Delete an element from a list
@@ -191,7 +191,7 @@ main(_) :-
 	displayBoard(B),nl,
     write('Joueur1 ->'),
     selectMove(j1, X, Y, B, NB1, AP1),!, nl,
-    displayBoard(NB),
+    displayBoard(NB1),
     write('Joueur2 ->'),
     selectMove(j2, W, Z, NB1, NB2, AP2),
     displayBoard(NB2).
