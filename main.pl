@@ -1,5 +1,5 @@
 % to test
-testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kr],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,[1,ko],3,1,3,1],  [2,2,1,3,2,2]]).
+% testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kr],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,[1,ko],3,1,3,1],  [2,2,1,3,2,2]]).
 
 % Get a specific element from a list
 ith(0, [L|Q], L) :- !.
@@ -57,7 +57,7 @@ movePiece(P, X, Y, B, NB, AP) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Ask where to put pieces
-askInitialPiece([], _, _):-!.
+askInitialPiece([], B, B):-!.
 askInitialPiece([L|Q], B, NB) :-
 	nl, write('Coordonnées de la pièce '), write(L), write(' : '), nl,
     read(X),
@@ -66,8 +66,9 @@ askInitialPiece([L|Q], B, NB) :-
         ->  askInitialPiece([L|Q], B, NB)
         ;   movePiece(L, X, Y, B, TB, AP),
             nl,
-            % displayBoard(TB),
-            askInitialPiece(Q, TB, NB)
+            displayBoard(TB),
+            askInitialPiece(Q, TB, NB),
+            true
     ).
 
 askInitialPieces(Joueur,B, NB) :-
@@ -77,17 +78,22 @@ askInitialPieces(Joueur,B, NB) :-
 initBoard(NB2) :-
     write('Position initiale :'),
     nl,
-    % board(2, I),
-    % displayBoard(I),
+    board(2, I),
+    displayBoard(I),
     nl, nl,
     write('Quelle position souhaitez-vous avoir ? (1 : Nord, 2 : Sud(actuel), 3 : Ouest, 4 : Est):'),
     nl,
     read(S),
     board(S, B),
-    % displayBoard(B),
-    askInitialPieces(j1, B, NB1), % il ne comprend pas qu'il faut stocker dans NB1'
-    displayBoard(NB1),
-     askInitialPieces(j2, NB1, NB2).
+    displayBoard(B),
+    nl,
+    write('Joueur1 ->'),
+    nl,
+    askInitialPieces(j1, B, NB1),
+    nl,
+    write('Joueur2 ->'),
+    nl,
+    askInitialPieces(j2, NB1, NB2).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Delete an element from a list
@@ -170,12 +176,12 @@ possibleMoves(Player, Board,PossibleMoveList) :-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Main process
 main(_) :-
-    testBoard(B),
-    % initBoard(B), !,
-	displayBoard(B),nl,
+    % testBoard(B),
+    initBoard(B),
+    nl,
     write('Joueur1 ->'),
     selectMove(j1, X, Y, B, NB1, AP1),!, nl,
-    displayBoard(NB),
+    displayBoard(NB1),
     write('Joueur2 ->'),
     selectMove(j2, W, Z, NB1, NB2, AP2),
     displayBoard(NB2).
