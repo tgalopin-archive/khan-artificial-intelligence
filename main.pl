@@ -22,17 +22,17 @@ replace(L, _, _, L).
 %   replaceElement(O, R, Liste, ListeResulat)
 replaceElement(_, _, [], []).
 replaceElement(O, R, [O|T], [R|T2]) :- replaceElement(O, R, T, T2), !.
-replaceElement(O, R, [H|T], [H|T2]) :- dif(H,O), replaceElement(O, R, T, T2).
+replaceElement(O, R, [H|T], [H|T2]) :- H \= O, replaceElement(O, R, T, T2).
 
 % Retirer UN element X d'une liste
 delOneOccurrence(X, [], []).
 delOneOccurrence(X, [X|Q], Q) :- !. % pour éviter le backtraking et vérifier seulement la première occurrence
-delOneOccurrence(X, [T|Q], [T|R]) :- dif(X,T), delOneOccurrence(X,Q,R).
+delOneOccurrence(X, [T|Q], [T|R]) :- X \= T, delOneOccurrence(X,Q,R).
 
 % Retirer TOUS les elements X d'une liste
 delAllOccurrences(X, [], []).
 delAllOccurrences(X, [X|Q], R) :- delAllOccurrences(X,Q,R), !.
-delAllOccurrences(X, [T|Q], [T|R]) :- dif(X,T), delAllOccurrences(X,Q,R).
+delAllOccurrences(X, [T|Q], [T|R]) :- X \= T, delAllOccurrences(X,Q,R).
 
 % remove duplication
 filtrate([],[]).
@@ -54,22 +54,55 @@ board(3, [ [3,1,2,2,3,1], [2,3,1,3,1,2], [2,1,3,1,3,2], [1,3,2,2,1,3], [3,1,3,1,
 board(4, [ [2,2,3,1,2,2], [1,3,1,3,1,3], [3,1,2,2,3,1], [2,3,1,3,1,2], [2,1,3,1,3,2], [1,3,2,2,1,3] ]).
 
 % Liste des pièces possibles
-pieces(j1,[sr1,sr2,sr3,sr4,sr5,kr]).
-pieces(j2,[so1,so2,so3,so4,so5,ko]).
+pieces(j1,[sr1,sr2,sr3,sr4,sr5,kar]).
+pieces(j2,[so1,so2,so3,so4,so5,kao]).
 
 % renvoie vrai si P est une pièce de j1 ou j2.
 isPiece(j1,P) :- pieces(j1,A), member(P, A), !.
 isPiece(j2,P) :- pieces(j2,B), member(P, B), !.
 
 % Aficher le plateau de jeu
-displayRow([]) :- !.
-displayRow([L|[]]) :- write(' | '), write(L), write(' | '), !.
-displayRow([L|Q]) :- write(' | '), write(L), displayRow(Q).
-displayRows([]):-!.
-displayRows([L|[]]) :- write(' -------------------------'), nl, displayRow(L), nl, write(' -------------------------'), !.
-displayRows([L|Q]) :- write(' -------------------------'), nl, displayRow(L), nl, displayRows(Q).
+displayPiece([SquareValue|[Piece|_]]) :- write(SquareValue), write('|'), write(Piece), !.
+displayPiece(SquareValue) :- write('  '), write(SquareValue), write('  '), !.
 
-displayBoard(P) :- displayRows(P).
+displayRow([]) :- !.
+displayRow([L|[]]) :-
+        write(' | '),
+        displayPiece(L),
+        write(' | '), !.
+displayRow([L|Q]) :-
+        write(' | '),
+        displayPiece(L),
+        displayRow(Q).
+
+displayRows([], _):-!.
+displayRows([L|[]], Coord) :-
+        PrevCoord is Coord - 1,
+        DisplayCoord is 6 - Coord,
+        write('     -------------------------------------------------'), nl,
+        write(' '), write(DisplayCoord), write('  '), displayRow(L), nl,
+        write('     -------------------------------------------------'), !.
+displayRows([L|Q], Coord) :-
+        PrevCoord is Coord - 1,
+        DisplayCoord is 6 - Coord,
+        write('     -------------------------------------------------'), nl,
+        write(' '), write(DisplayCoord), write('  '), displayRow(L), nl,
+        displayRows(Q, PrevCoord).
+
+displayXCoord(0) :- !.
+displayXCoord(Coord) :-
+        PrevCoord is Coord - 1,
+        displayXCoord(PrevCoord),
+        write(PrevCoord),
+        write('       ').
+
+displayBoard(Board) :-
+        length(Board, ColumnSize),
+        getElementByIndex(0, Board, Line),
+        length(Line, LineSize),
+        write('Y▼ X ▶   '),
+        displayXCoord(LineSize), nl,
+        displayRows(Board, ColumnSize).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -332,15 +365,15 @@ allowedMove([Piece, I, X,Y],[X1,Y1]):- moveRight([Piece, 1, X,Y], [X1,Y1]), allo
 % Boucle de jeu
 %
 
-testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kr],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,[1,ko],3,1,3,1],  [2,2,1,3,2,2]]).
+testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kar],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,[1,kao],3,1,3,1],  [2,2,1,3,2,2]]).
 
 main(_) :-
     testBoard(B),
     % initBoard(B),
-    displayBoard(B),nl,
+    displayBoard(B), nl,
     write('Joueur1 ->'),
     selectMove(j1, X, Y, B, NB1, OldPiece1),!, nl,
-    displayBoard(NB1),
+    displayBoard(NB1), nl,
     write('Joueur2 ->'),
     selectMove(j2, W, Z, NB1, NB2, OldPiece2),
     displayBoard(NB2).
