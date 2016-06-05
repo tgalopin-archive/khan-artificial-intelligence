@@ -1,12 +1,21 @@
 % to test
 testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kr],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,[1,ko],3,1,3,1],  [2,2,1,3,2,2]]).
 
+:- dynamic(khan/1).
+
 % Get a specific element from a list
 ith(0, [L|Q], L) :- !.
 ith(N, [_|Q], L) :- M is N-1, ith(M, Q, L).
 
 %get Piece at coordinates [X Y]
-getPiece(Board,[X,Y],Piece):- occupied([X,Y],Board), ith(X,Board,XLine), ith(Y,XLine,YLine), ith(1,YLine,Piece).
+getPiece(Board,[X,Y],Piece):- occupied([X,Y],Board), ith(X,Board,XLine), ith(Y,XLine,YLine), ith(1,YLine,Piece), !.
+
+%find piece on Board -> kalista
+getPiece(Board,[X,Y],Piece):- getInfoPiece(Board,[_,X,Y],Piece).
+
+% get value, coordinates of piece
+getInfoPiece(Board,[Val,X,Y],Piece):- isPiece(Player,Piece), getPiecesOnBoard(Player, Board, ListPieces,0,0), member([Val,Piece,X,Y],ListPieces),!.
+
 
 % Initialize the board
 board(1, [ [1,2,2,3,1,2], [3,1,3,1,3,2], [2,3,1,2,1,3], [2,1,3,2,3,1], [1,3,1,3,1,2], [3,2,2,1,3,2] ]).
@@ -49,14 +58,14 @@ occupiedOnLine(Y,L):- ith(Y, L, L2), length(L2,2).
 addPiece(L2,Pie, L3, AP) :- length(L2,2), ith(0,L2,L2A), ith(1,L2,AP), append([L2A],[Pie],L3),!.
 
 % Add the piece is place free
-addPiece(L2, Pie, L3, _) :- append([L2],[Pie],L3).
+addPiece(L2, Pie, L3, []) :- append([L2],[Pie],L3).
 
 % Move a piece
 movePiece(Player, P, X, Y, B, NB, AP) :-!,
 	ith(X, B, L1),
 	ith(Y, L1, L2),
 	addPiece(L2, P, L3, AP),
-    \+ forbiddenMove(Player, AP),
+    \+ isPiece(Player,AP),
 	replace(L1, Y, L3, L4),
 	replace(B, X, L4, NB), !.
 
@@ -101,6 +110,7 @@ initBoard(NB2) :-
     nl,
     askInitialPieces(j2, NB1, NB2).
 
+% Tester les possible moves, et si liste vide choix arbitraire
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Delete an element from a list
@@ -126,6 +136,9 @@ selectMove(J, X, Y, B, NB, AP) :-
         ->  write('Pièce invalide'),
             selectMove(J, X, Y, B, NB, AP)
         ;   % displayBoard(B),
+            (getInfoPiece(B,ValList,P), ith(0,ValList,Val), \+ khan(Val)
+            -> write('Le khan est possitionné sur'), write(Val), write(', choisir une autre pièce'),nl, selectMove(J, X, Y, B, NB, AP)
+            ;
             write('Deplacement de la pièce '),
             write(P),
             write(' : '),
@@ -133,8 +146,8 @@ selectMove(J, X, Y, B, NB, AP) :-
             write('X : '), read(X),
             write('Y : '), read(Y),
             extractDelete(B, P,TB),
-(\+ movePiece(J,P, X, Y, TB, NB, AP) -> write('déplacement non autorisé'), selectMove(J,U,V,B,NB,AP) ; true)
-    ).
+(\+ movePiece(J,P, X, Y, TB, NB, AP) -> write('déplacement non autorisé'), !,selectMove(J,U,V,B,NB,AP) ; retractall(khan(X)), asserta(khan(Val)))
+    )).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 moveUp(Board, Player,OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX - 1, NewY is ActualY, \+ member([NewX, NewY], OldPos), \+ forbiddenMove(Board,Player,[NewX,NewY]), append(OldPos, [[ActualX,ActualY]], OldActualPos).
@@ -197,13 +210,14 @@ possibleMoves(Player, Board,PossibleMoveList) :-
 main(_) :-
     testBoard(B),
     % initBoard(B),
+    % asserta(khan(1)),
 	displayBoard(B),nl,
     write('Joueur1 ->'),
     selectMove(j1, X, Y, B, NB1, AP1),!, nl,
-    displayBoard(NB1),
-    write('Joueur2 ->'),
-    selectMove(j2, W, Z, NB1, NB2, AP2),
-    displayBoard(NB2).
+    displayBoard(NB1).
+    %write('Joueur2 ->'),
+    %selectMove(j2, W, Z, NB1, NB2, AP2),!,
+    %displayBoard(NB2).
 
 test(_):- initBoard(B), displayBoard(B). % fonctionnne pas
 
@@ -216,6 +230,8 @@ allowedPlace([X,Y]):- X > -1, Y > -1, X < 6, Y < 6.
 %allowedMove([Piece, I, X,Y],[X1,Y1]):- moveRight([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
 
 forbiddenMove(Board,Player,NewCoord) :- getPiece(Board,NewCoord, OldPiece), isPiece(Player,OldPiece).
+
+
 
 
 % Idées:
