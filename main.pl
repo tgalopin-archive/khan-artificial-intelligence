@@ -5,6 +5,9 @@ testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kr],
 ith(0, [L|Q], L) :- !.
 ith(N, [_|Q], L) :- M is N-1, ith(M, Q, L).
 
+%get Piece at coordinates [X Y]
+getPiece(Board,[X,Y],Piece):- occupied([X,Y],Board), ith(X,Board,XLine), ith(Y,XLine,YLine), ith(1,YLine,Piece).
+
 % Initialize the board
 board(1, [ [1,2,2,3,1,2], [3,1,3,1,3,2], [2,3,1,2,1,3], [2,1,3,2,3,1], [1,3,1,3,1,2], [3,2,2,1,3,2] ]).
 board(2, [ [2,3,1,2,2,3], [2,1,3,1,3,1], [1,3,2,3,1,2], [3,1,2,1,3,2], [2,3,1,3,1,3], [2,1,3,2,2,1] ]).
@@ -14,6 +17,8 @@ board(4, [ [2,2,3,1,2,2], [1,3,1,3,1,3], [3,1,2,2,3,1], [2,3,1,3,1,2], [2,1,3,1,
 % Possibles pieces
 pieces(j1,[sr1,sr2,sr3,sr4,sr5,kr]).
 pieces(j2,[so1,so2,so3,so4,so5,ko]).
+kalista(j1, kr).
+kalista(j2, ko).
 isPiece(j1,P) :- pieces(j1,A), member(P, A), !.
 isPiece(j2,P) :- pieces(j2,B), member(P, B), !.
 
@@ -47,10 +52,11 @@ addPiece(L2,Pie, L3, AP) :- length(L2,2), ith(0,L2,L2A), ith(1,L2,AP), append([L
 addPiece(L2, Pie, L3, _) :- append([L2],[Pie],L3).
 
 % Move a piece
-movePiece(P, X, Y, B, NB, AP) :-
+movePiece(Player, P, X, Y, B, NB, AP) :-!,
 	ith(X, B, L1),
 	ith(Y, L1, L2),
 	addPiece(L2, P, L3, AP),
+    \+ forbiddenMove(Player, AP),
 	replace(L1, Y, L3, L4),
 	replace(B, X, L4, NB), !.
 
@@ -65,7 +71,7 @@ askInitialPiece([L|Q], B, NB) :-
 	read(Y),
     (occupied([X,Y], B)
         ->  askInitialPiece([L|Q], B, NB)
-        ;   movePiece(L, X, Y, B, TB, AP),
+        ;   movePiece(Player,L, X, Y, B, TB, AP),
             nl,
             displayBoard(TB),
             askInitialPiece(Q, TB, NB)
@@ -111,7 +117,7 @@ extractDelete([L|Ls], P, [SS|Ls]) :-
 extractDelete([L|Ls], P, [SubListsWithout|Ls]):- \+ member(P,L), extractDelete(L,P,SubListsWithout).
 extractDelete([L|Ls], P, [L|SubListsWithout]) :- \+ member(P,L), extractDelete(Ls, P, SubListsWithout), !.
 
-% AP old piece, TO DO ckeck Kalista
+% AP old piece, TO DO ckeck Kalista, khan
 selectMove(J, X, Y, B, NB, AP) :-
     nl,
     write('Quelle pièce voulez-vous jouer ?'),
@@ -127,33 +133,33 @@ selectMove(J, X, Y, B, NB, AP) :-
             write('X : '), read(X),
             write('Y : '), read(Y),
             extractDelete(B, P,TB),
-            movePiece(P, X, Y, TB, NB, AP)
+(\+ movePiece(J,P, X, Y, TB, NB, AP) -> write('déplacement non autorisé'), selectMove(J,U,V,B,NB,AP) ; true)
     ).
 
-% TODO Vérifier que ca bouffe pas une piÈce de son propre camp
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-moveUp(OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX - 1, NewY is ActualY, \+ member([NewX, NewY], OldPos), append(OldPos, [[ActualX,ActualY]], OldActualPos).
-moveDown(OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX + 1, NewY is ActualY, \+ member([NewX, NewY], OldPos), append(OldPos, [[ActualX,ActualY]], OldActualPos).
-moveLeft(OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX, NewY is ActualY - 1, \+ member([NewX, NewY], OldPos), append(OldPos, [[ActualX,ActualY]], OldActualPos).
-moveRight(OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX, NewY is ActualY + 1, \+ member([NewX, NewY], OldPos), append(OldPos, [[ActualX,ActualY]], OldActualPos).
+moveUp(Board, Player,OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX - 1, NewY is ActualY, \+ member([NewX, NewY], OldPos), \+ forbiddenMove(Board,Player,[NewX,NewY]), append(OldPos, [[ActualX,ActualY]], OldActualPos).
+moveDown(Board, Player,OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX + 1, NewY is ActualY, \+ member([NewX, NewY], OldPos), \+ forbiddenMove(Board,Player,[NewX,NewY]),append(OldPos, [[ActualX,ActualY]], OldActualPos).
+moveLeft(Board, Player,OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX, NewY is ActualY - 1, \+ member([NewX, NewY], OldPos), \+ forbiddenMove(Board,Player,[NewX,NewY]),append(OldPos, [[ActualX,ActualY]], OldActualPos).
+moveRight(Board, Player,OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :- NewX is ActualX, NewY is ActualY + 1, \+ member([NewX, NewY], OldPos), \+ forbiddenMove(Board,Player,[NewX,NewY]),append(OldPos, [[ActualX,ActualY]], OldActualPos).
 
-place(I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 = 0, moveUp(OldPos,ActualPos, NewPos, AllOldOldPos), allowedPlace(NewPos).
-place(I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 = 0, moveDown(OldPos,ActualPos, NewPos, AllOldOldPos), allowedPlace(NewPos).
-place(I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 = 0, moveLeft(OldPos,ActualPos, NewPos, AllOldOldPos), allowedPlace(NewPos).
-place(I,  Board,OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 = 0, moveRight(OldPos,ActualPos, NewPos, AllOldOldPos), allowedPlace(NewPos), !.
+place(Player, I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 = 0, moveUp(Board, Player,OldPos,ActualPos, NewPos, AllOldOldPos), allowedPlace(NewPos).
+place(Player, I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 = 0, moveDown(Board, Player,OldPos,ActualPos, NewPos, AllOldOldPos), allowedPlace(NewPos).
+place(Player, I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 = 0, moveLeft(Board, Player,OldPos,ActualPos, NewPos, AllOldOldPos), allowedPlace(NewPos).
+place(Player, I,  Board,OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 = 0, moveRight(Board, Player,OldPos,ActualPos, NewPos, AllOldOldPos), allowedPlace(NewPos), !.
 
 % place(I, OldPos,ActualPos, NewPos, AllOldOldPos):- I1 is I-1, I1 > 0, !.
 
-place(I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- moveUp(OldPos,ActualPos, NewActualPos, AllOldPos),allowedPlace(NewActualPos), \+ occupied(NewActualPos, Board), I1 is I-1,  place(I1,Board, AllOldPos,NewActualPos, NewPos, AllOldOldPos).
-place(I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- moveDown(OldPos,ActualPos, NewActualPos, AllOldPos), allowedPlace(NewActualPos), \+ occupied(NewActualPos, Board),I1 is I-1, place(I1,Board, AllOldPos,NewActualPos, NewPos, AllOldOldPos).
-place(I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- moveLeft(OldPos,ActualPos, NewActualPos, AllOldPos),allowedPlace(NewActualPos), \+ occupied(NewActualPos, Board), I1 is I-1, place(I1,Board, AllOldPos,NewActualPos, NewPos,AllOldOldPos).
-place(I, Board,OldPos,ActualPos, NewPos, AllOldOldPos):- moveRight(OldPos,ActualPos, NewActualPos, AllOldPos), allowedPlace(NewActualPos), \+ occupied(NewActualPos, Board), I1 is I-1, place(I1,Board, AllOldPos,NewActualPos, NewPos, AllOldOldPos).
+place(Player, I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- moveUp(Board, Player,OldPos,ActualPos, NewActualPos, AllOldPos),allowedPlace(NewActualPos), \+ occupied(NewActualPos, Board), I1 is I-1,  place(Player, I1,Board, AllOldPos,NewActualPos, NewPos, AllOldOldPos).
+place(Player, I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- moveDown(Board, Player,OldPos,ActualPos, NewActualPos, AllOldPos), allowedPlace(NewActualPos), \+ occupied(NewActualPos, Board),I1 is I-1, place(Player, I1,Board, AllOldPos,NewActualPos, NewPos, AllOldOldPos).
+place(Player, I, Board, OldPos,ActualPos, NewPos, AllOldOldPos):- moveLeft(Board, Player,OldPos,ActualPos, NewActualPos, AllOldPos),allowedPlace(NewActualPos), \+ occupied(NewActualPos, Board), I1 is I-1, place(Player, I1,Board, AllOldPos,NewActualPos, NewPos,AllOldOldPos).
+place(Player, I, Board,OldPos,ActualPos, NewPos, AllOldOldPos):- moveRight(Board, Player,OldPos,ActualPos, NewActualPos, AllOldPos), allowedPlace(NewActualPos), \+ occupied(NewActualPos, Board), I1 is I-1, place(Player, I1,Board, AllOldPos,NewActualPos, NewPos, AllOldOldPos).
 
 
 % remove duplication
 filtrate([],[]).
 filtrate([H|T], WithoutDup) :- member(H,T), filtrate(T,WithoutDup),!.
 filtrate([H|T], [H|WithoutDup]) :- \+ member(H,T),filtrate(T,WithoutDup).
+
 
 
 % get the pieces on the board at the moment, with the value of the box and the coordinates
@@ -166,24 +172,25 @@ getPiecesOnLine(Player,[H|T],[L|PList],X,Y):- Y1 is Y+1, occupiedOnLine(0,[H|T])
 getPiecesOnLine(Player,[H|T],PList, X,Y):- Y1 is Y+1, getPiecesOnLine(Player,T,PList,X,Y1).
 
 getPiecesOnBoard(Player, [], [],_,_):-!.
-getPiecesOnBoard(Player, [H|T], BPList,X,Y ):- getPiecesOnBoard(Player,T,LPList,X,Y),X1 is X+1,getPiecesOnLine(Player,H,L,X1,Y), append(L,LPList, BPList).
+getPiecesOnBoard(Player, [H|T], BPList,X,Y ):- getPiecesOnLine(Player,H,L,X,Y), X1 is X+1,getPiecesOnBoard(Player,T,LPList,X1,Y), append(L,LPList, BPList).
 
 concatElementList(L,[],[]):-!.
 concatElementList([X,Y],[H|T],[[H,X,Y]|L2]):- concatElementList([X,Y],T,L2).
 
 % get all possible moves for each piece
-getAllMoves([],Board,[]):-!.
-getAllMoves([[Val,Piece, X,Y]|T], Board,[AllMoves1Piece|AllMoves]):-
-    findall(L1,place(Val,Board,[],[X,Y],L1,L2),R), filtrate(R,R1),
+getAllMoves(Player,[],Board,[]):-!.
+getAllMoves(Player,[[Val,Piece, X,Y]|T], Board,[AllMoves1Piece|AllMoves]):-
+    findall(L1,place(Player,Val,Board,[],[X,Y],L1,L2),R), write(R),
+    filtrate(R,R1),
     concatElementList([Val,Piece],R1,AllMoves1Piece),
-    getAllMoves(T,Board,AllMoves).
+    getAllMoves(Player,T,Board,AllMoves).
 
 
 
 % get all possible moves for all the pieces
 possibleMoves(Player, Board,PossibleMoveList) :-
     getPiecesOnBoard(Player, Board, PList,0,0), % PList = [val, piece, X, Y]
-    getAllMoves(PList,Board,PossibleMoveList).
+    getAllMoves(Player, PList,Board,PossibleMoveList).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Main process
@@ -203,10 +210,12 @@ test(_):- initBoard(B), displayBoard(B). % fonctionnne pas
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 allowedPlace([X,Y]):- X > -1, Y > -1, X < 6, Y < 6.
 
-allowedMove([Piece, I, X,Y],[X1,Y1]):- moveUp([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
-allowedMove([Piece, I, X,Y],[X1,Y1]):- moveDown([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
-allowedMove([Piece, I, X,Y],[X1,Y1]):- moveLeft([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
-allowedMove([Piece, I, X,Y],[X1,Y1]):- moveRight([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
+%allowedMove([Piece, I, X,Y],[X1,Y1]):- moveUp([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
+%allowedMove([Piece, I, X,Y],[X1,Y1]):- moveDown([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
+%allowedMove([Piece, I, X,Y],[X1,Y1]):- moveLeft([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
+%allowedMove([Piece, I, X,Y],[X1,Y1]):- moveRight([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
+
+forbiddenMove(Board,Player,NewCoord) :- getPiece(Board,NewCoord, OldPiece), isPiece(Player,OldPiece).
 
 
 % Idées:
