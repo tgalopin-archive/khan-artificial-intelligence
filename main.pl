@@ -266,21 +266,22 @@ selectMove(Player, X, Y, Board, NewBoard, OldPiece) :-
                 write('X : '), read(X),
                 write('Y : '), read(Y),
                 removePieceFromBoard(Board, Piece, TmpBoard),% enlever la pièce du plateau de jeu
-                (movePiece(Player,Piece, X, Y, TmpBoard, NewBoard, OldPiece) %si on arrive pas à placer la pièce sur sa nouvelle position
+                (allowedMove(Player, Board, X,Y,Piece), %le déplacement doit être présent dans la liste des coups possibles
+                    movePiece(Player,Piece, X, Y, TmpBoard, NewBoard, OldPiece) %si on arrive pas à placer la pièce sur sa nouvelle position
                 ->
                     getInfoPiece(NewBoard,[NewVal,_,_],Piece),
-                    retractall(khan(K)),write('le nouveau khan est '),write(NewVal),nl,
+                    retractall(khan(K)),nl,write('Le nouveau khan est '),write(NewVal),nl,
                     asserta(khan(NewVal)) % on met le khan à la nouvelle valeur
                     ;
-                    write('déplacement non autorisé'),
+                    write('Déplacement non autorisé'),
                     selectMove(Player,U,V,Board,NewBoard,OldPiece)
 
-                ))
+                )
             ;
-                write('Le khan est possitionné sur'), khan(X), write(X), write(', choisir une autre pièce'),nl,
+                write('Le khan est possitionné sur'), khan(K), write(K), write(', choisir une autre pièce'),nl,
                 selectMove(Player, X, Y, Board, NewBoard, OldPiece)
 
-               ).
+               )).
 
 
 % TODO Vérifier que ca bouffe pas une pièce de son propre camp
@@ -387,7 +388,7 @@ concatElementList([X,Y],[H|T],[[H,X,Y]|L2]):- concatElementList([X,Y],T,L2).
 % get all possible moves for each piece
 getAllMoves(Player,[],Board,[]):-!.
 getAllMoves(Player,[[Val,Piece, X,Y]|T], Board,[AllMoves1Piece|AllMoves]):-
-    findall(L1,place(Player,Val,Board,[],[X,Y],L1,L2),R), write(R),
+    findall(L1,place(Player,Val,Board,[],[X,Y],L1,L2),R),
     filtrate(R,R1),
     concatElementList([Val,Piece],R1,AllMoves1Piece),
     getAllMoves(Player,T,Board,AllMoves).
@@ -405,7 +406,10 @@ allowedPlace([X,Y]):- X > -1, Y > -1, X < 6, Y < 6.
 %allowedMove([Piece, I, X,Y],[X1,Y1]):- moveLeft([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
 %allowedMove([Piece, I, X,Y],[X1,Y1]):- moveRight([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
 
-allowedMove(
+allowedMove(_,_,_,[]) :- !, fail.
+allowedMove(NewX,NewY,Piece,[H|T]) :- (\+ member([[NewX,NewY],_,Piece],H) -> allowedMove(NewX,NewY,Piece,T) ; true).
+
+allowedMove(Player, Board,NewX,NewY,Piece):- possibleMoves(Player,Board,L), allowedMove(NewX,NewY,Piece,L).
 
 forbiddenMove(Board,Player,NewCoord) :- getPiece(Board,NewCoord, OldPiece), isPiece(Player,OldPiece).
 
@@ -425,7 +429,8 @@ forbiddenMove(Board,Player,NewCoord) :- getPiece(Board,NewCoord, OldPiece), isPi
 
 testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kar],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,[1,kao],3,1,3,1],  [2,2,1,3,2,2]]).
 
-main(_) :-
+main(_) :- % A appeler avec retractall(khan(Y)),asserta(khan(1)),main(_).
+    listing,
     testBoard(B),
     % initBoard(B),
     displayBoard(B), nl,
