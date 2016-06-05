@@ -28,7 +28,7 @@ concatElementList(L,[],[]):-!.
 concatElementList([X,Y],[H|T],[[H,X,Y]|L2]):- concatElementList([X,Y],T,L2).
 
 
-
+% Contrôler que les pièces sont bien possitionnées sur les deux premières rangées
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Step 1
 % 
