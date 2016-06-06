@@ -158,6 +158,16 @@ movePiece(Player, PieceMoved, X, Y, Board, NewBoard, OldPiece) :- !,
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+askPosition(PositionChoisie) :-
+    write('Quelle position souhaitez-vous avoir ? [1 (Nord) - 2 (Sud, actuel) - 3 (Ouest) - 4 (Est)]'),
+    nl,
+    read(TempPosition),
+    % Utilisation d'une condition if else : "->" action_si_vrai, ";" action_si_faux
+    (member(TempPosition, [1,2,3,4])
+        ->  PositionChoisie is TempPosition
+        ;   askPosition(PositionChoisie)
+    ).
+
 % Demander où placer les pièces % TODO vérifier le move
 askPieces([], Board, Board) :- !.
 askPieces([Piece|Q], Board, NewBoard) :-
@@ -184,14 +194,14 @@ askPlayerPiecesSetUp(Player, Board, NewBoard) :-
 
 % Initialiser le plateau de jeu
 initBoard(Board) :-
-        write('Position initiale :'),
+        write('Position initiale :           1▼'),
         nl,
         board(2, InitialBoard), % position au Sud par défaut
         displayBoard(InitialBoard), % afficher le plateau
-        nl, nl,
-        write('Quelle position souhaitez-vous avoir ? (1 : Nord, 2 : Sud(actuel), 3 : Ouest, 4 : Est):'),
         nl,
-        read(WantedPosition), 
+        write('                              2▲'),
+        nl, nl,
+        askPosition(WantedPosition),
         board(WantedPosition, WantedBoard), % Initialiser WantedBoard avec la disposition demandée
         displayBoard(WantedBoard), % Afficher le plateau avec la disposition demandée
         nl,
