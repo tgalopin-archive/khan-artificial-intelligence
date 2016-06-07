@@ -8,6 +8,9 @@
 % declare khan comme un prédicat dynamique
 :- dynamic(khan/1).
 
+empty(T):-length(T,0).
+empty([H|T]):- empty(H), empty(T).
+
 % récupérer les corrdonnées d'une pièce
 getPiece(Board,[X,Y],Piece):- squareTaken([X,Y],Board), getElementByIndex(X,Board,XLine), getElementByIndex(Y,XLine,YLine), getElementByIndex(1,YLine,Piece), !.
 
@@ -71,8 +74,8 @@ board(4, [ [2,2,3,1,2,2], [1,3,1,3,1,3], [3,1,2,2,3,1], [2,3,1,3,1,2], [2,1,3,1,
 % Liste des pièces possibles
 pieces(j1,[sr1,sr2,sr3,sr4,sr5,kar]).
 pieces(j2,[so1,so2,so3,so4,so5,kao]).
-kalista(j1, kar).
-kalista(j2, kao).
+kalista(kar).
+kalista(kao).
 
 % renvoie vrai si P est une pièce de j1 ou j2.
 
@@ -252,13 +255,14 @@ removePieceFromBoard([OldLine|Q], Piece, [OldLine|R]) :-
 %TODO ckeck Kalista
 selectMove(Player, X, Y, Board, NewBoard, OldPiece) :-
         nl,
+        write('Khan positionné à '), setof(K,khan(K),R), write(R),nl,
         write('Quelle pièce voulez-vous jouer (sr1, so1, ...) ?'),
         read(Piece),
         (\+ isPiece(Player,Piece) % si la pièce n'est pas une des pièces du joueur
             ->  write('Pièce invalide'),
                 selectMove(Player, X, Y, Board, NewBoard, OldPiece)
             ;   % displayBoard(Board),
-            (getInfoPiece(Board,ValList,Piece), getElementByIndex(0,ValList,Val), khan(Val) % on regarde que la pièce quon souhaite bouger respecte le khan actuel
+            (getInfoPiece(Board,ValList,Piece), getElementByIndex(0,ValList,Val), member(Val,R) % on regarde que la pièce quon souhaite bouger respecte le khan actuel
             ->  write('Deplacement de la pièce '),
                 write(Piece),
                 write(' : '),
@@ -266,19 +270,23 @@ selectMove(Player, X, Y, Board, NewBoard, OldPiece) :-
                 write('X : '), read(X),
                 write('Y : '), read(Y),
                 removePieceFromBoard(Board, Piece, TmpBoard),% enlever la pièce du plateau de jeu
-                (allowedMove(Player, Board, X,Y,Piece), %le déplacement doit être présent dans la liste des coups possibles
-                    movePiece(Player,Piece, X, Y, TmpBoard, NewBoard, OldPiece) %si on arrive pas à placer la pièce sur sa nouvelle position
+                (allowedMove(Player, Board, X,Y,Piece),%le déplacement doit être présent dans la liste des coups possibles
+                    movePiece(Player,Piece, X, Y, TmpBoard, NewBoard, OldPiece), victory(Player,OldPiece) %si on arrive pas à placer la pièce sur sa nouvelle position
                 ->
                     getInfoPiece(NewBoard,[NewVal,_,_],Piece),
-                    retractall(khan(K)),nl,write('Le nouveau khan est '),write(NewVal),nl,
+                    retractall(khan(K)),nl,
                     asserta(khan(NewVal)) % on met le khan à la nouvelle valeur
-                    ;
-                    write('Déplacement non autorisé'),
+                ;
+                    nl,
+                    write('ERREUR : Déplacement non autorisé !!'),nl,
+                    canPlay(Player,Board),
+                    setof(R2,possibleMoves(Player, Board,R2),L),
+                    write('Liste des mouvements autorisés :'), write(L),nl,
                     selectMove(Player,U,V,Board,NewBoard,OldPiece)
 
                 )
             ;
-                write('Le khan est possitionné sur'), khan(K), write(K), write(', choisir une autre pièce'),nl,
+                write('Le khan est possitionné sur '), khan(K), write(K), write(', choisir une autre pièce.'),nl,
                 selectMove(Player, X, Y, Board, NewBoard, OldPiece)
 
                )).
@@ -387,7 +395,13 @@ concatElementList([X,Y],[H|T],[[H,X,Y]|L2]):- concatElementList([X,Y],T,L2).
 
 % get all possible moves for each piece
 getAllMoves(Player,[],Board,[]):-!.
+
+getAllMoves(Player,[[Val,Piece, X,Y]|T], Board,AllMoves):-
+    setof(K,khan(K),L),\+ member(Val,L),
+    getAllMoves(Player,T, Board,AllMoves), !.
+
 getAllMoves(Player,[[Val,Piece, X,Y]|T], Board,[AllMoves1Piece|AllMoves]):-
+    setof(K,khan(K),L),member(Val,L),
     findall(L1,place(Player,Val,Board,[],[X,Y],L1,L2),R),
     filtrate(R,R1),
     concatElementList([Val,Piece],R1,AllMoves1Piece),
@@ -395,7 +409,7 @@ getAllMoves(Player,[[Val,Piece, X,Y]|T], Board,[AllMoves1Piece|AllMoves]):-
 
 % get all possible moves for all the pieces
 possibleMoves(Player, Board,PossibleMoveList) :-
-    getPiecesOnBoard(Player, Board, PList,0,0), % PList = [val, piece, X, Y]
+    getPiecesOnBoard(Player, Board, PList,0,0),% PList = [val, piece, X, Y]
     getAllMoves(Player, PList,Board,PossibleMoveList).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -406,10 +420,13 @@ allowedPlace([X,Y]):- X > -1, Y > -1, X < 6, Y < 6.
 %allowedMove([Piece, I, X,Y],[X1,Y1]):- moveLeft([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
 %allowedMove([Piece, I, X,Y],[X1,Y1]):- moveRight([Piece, 1, X,Y], [X1,Y1]), allowedPlace([X1,Y1]).
 
-allowedMove(_,_,_,[]) :- !, fail.
-allowedMove(NewX,NewY,Piece,[H|T]) :- (\+ member([[NewX,NewY],_,Piece],H) -> allowedMove(NewX,NewY,Piece,T) ; true).
 
-allowedMove(Player, Board,NewX,NewY,Piece):- possibleMoves(Player,Board,L), allowedMove(NewX,NewY,Piece,L).
+allowedMove([[NewX,NewY],_,Piece],[H|[]]):- member([[NewX,NewY],_,Piece],H),!.
+allowedMove([[NewX,NewY],_,Piece],[H|T]):- member([[NewX,NewY],_,Piece],H).
+allowedMove([[NewX,NewY],_,Piece],[H|T]):- allowedMove([[NewX,NewY],_,Piece],T).
+
+allowedMove(Player, Board,NewX,NewY,Piece):- possibleMoves(Player, Board,L),
+    allowedMove([[NewX,NewY],_,Piece],L).
 
 forbiddenMove(Board,Player,NewCoord) :- getPiece(Board,NewCoord, OldPiece), isPiece(Player,OldPiece).
 
@@ -429,16 +446,40 @@ forbiddenMove(Board,Player,NewCoord) :- getPiece(Board,NewCoord, OldPiece), isPi
 
 testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kar],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,[1,kao],3,1,3,1],  [2,2,1,3,2,2]]).
 
-main(_) :- % A appeler avec retractall(khan(Y)),asserta(khan(1)),main(_).
-    listing,
-    testBoard(B),
-    % initBoard(B),
-    displayBoard(B), nl,
+canPlay(Player, Board) :- possibleMoves(Player, Board,L),\+ empty(L),!.
+canPlay(Player, Board) :- write('Configuration bloquée. Toutes les pièces peuvent être bougées : '), retractall(khan(Y)), asserta(khan(3)), asserta(khan(2)),asserta(khan(1)).
+
+
+run(Board) :-
+    canPlay(j1,Board), nl,
     write('Joueur1 ->'),
-    selectMove(j1, X, Y, B, NB1, OldPiece1), nl,
-    displayBoard(NB1), nl,
+    play(Board, j1, NewBoard1), nl,
+    displayBoard(NewBoard1), nl,
+    canPlay(j2,NewBoard1), nl,
     write('Joueur2 ->'),
-    selectMove(j2, W, Z, NB1, NB2, OldPiece2),
-    displayBoard(NB2).
+    play(NewBoard1,j2,NewBoard2),
+    displayBoard(NewBoard2), nl,
+    run(NewBoard2).
+
+play(Board, Player, NewBoard) :- selectMove(Player, X, Y, Board, NewBoard, OldPiece) , victory(Player,OldPiece).
+
+main :- % A appeler avec retractall(khan(Y)),asserta(khan(1)),main(_).
+    retractall(khan(Y)), % a mettre dans init
+    asserta(khan(1)), % a mettre dans init
+    testBoard(B),
+    displayBoard(B),
+    % initBoard(B),
+    run(B),
+    nl.
+
+
+% Victory conditions
+victory(Player,OldPiece) :-
+    kalista(OldPiece),nl, % si la pièce prise est la kalista du joueur adverse
+    write('*********************************************************************'),nl,
+    write('FIN DU JEU : '),write(Player), write(' a gagné la partie !!!!!!'),!,nl,
+    write('*********************************************************************'),nl,
+    break. % arrêt du jeu
+victory(_,_).
 
 test(_):- initBoard(B), displayBoard(B). % fonctionnne pas
