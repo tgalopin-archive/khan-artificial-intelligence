@@ -492,11 +492,16 @@ run(Board) :-
 play(Board, Player, NewBoard) :- selectMove(Player, X, Y, Board, NewBoard, OldPiece), victory(Player,OldPiece).
 
 main :- % A appeler avec retractall(khan(Y)),asserta(khan(1)),main(_).
-    retractall(khan(Y)), % a mettre dans init
-    asserta(khan(1)), % a mettre dans init
-    testBoard(B),
-    displayBoard(B),
-    % initBoard(B),
+    retractall(khan(Y)),
+    asserta(khan(1)),
+    asserta(khan(2)),
+    asserta(khan(3)),
+    % testBoard(B),
+    initBoard(B),nl,
+    write('*********************************************************************'),nl,
+    write('                             DEBUT DU JEU '),nl,
+    write('*********************************************************************'),nl,
+displayBoard(B),
     run(B),
     nl.
 
@@ -505,7 +510,7 @@ main :- % A appeler avec retractall(khan(Y)),asserta(khan(1)),main(_).
 victory(Player,OldPiece) :-
     kalista(OldPiece),nl, % si la pièce prise est la kalista du joueur adverse
     write('*********************************************************************'),nl,
-    write('FIN DU JEU : '),write(Player), write(' a gagné la partie !!!!!!'),!,nl,
+    write('      FIN DU JEU : '),write(Player), write(' a gagné la partie !!!!!!'),!,nl,
     write('*********************************************************************'),nl,
     break. % arrêt du jeu
 victory(_,_).
