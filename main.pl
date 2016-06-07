@@ -161,48 +161,76 @@ movePiece(Player, PieceMoved, X, Y, Board, NewBoard, OldPiece) :- !,
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% Demander où placer les pièces % TODO vérifier le move
-askPieces([], Board, Board) :- !.
-askPieces([Piece|Q], Board, NewBoard) :-
+% Demander la position du board
+askPosition(PositionChoisie) :-
+    write('Quelle position souhaitez-vous avoir ? [1 (Nord) - 2 (Sud, actuel) - 3 (Ouest) - 4 (Est)]'),
+    nl,
+    read(TempPosition),
+    % Utilisation d'une condition if else : "->" action_si_vrai, ";" action_si_faux
+    (member(TempPosition, [1,2,3,4])
+        ->  PositionChoisie is TempPosition
+        ;   askPosition(PositionChoisie)
+    ).
+
+% Demander où placer les pièces
+isSetupPlaceAllowed(j1, 0).
+isSetupPlaceAllowed(j1, 1).
+isSetupPlaceAllowed(j2, 4).
+isSetupPlaceAllowed(j2, 5).
+
+askPieces(Player, [], Board, Board) :- !.
+askPieces(Player, [Piece|Q], Board, NewBoard) :-
+        nl,
         write('Coordonnées de la pièce '),
         write(Piece), % afficher la pièce à insérer
         write(' : '),
         nl,
+        write('X : '),
         read(X),
+        write('Y : '),
         read(Y),
         % Utilisation d'une condition if else : "->" action_si_vrai, ";" action_si_faux
-        (squareTaken([X,Y], Board)
-            ->  write('Case déjà prise.'), askPieces([Piece|Q], Board, NewBoard) % la case est déjà prise, le notifier au joueur et lui redemmander où placer ses pièces
-            ;   movePiece(Player,Piece, X, Y, Board, TmpBoard, OldPiece), % si la case est libre, alors bouger la pièce sur la case demandée par le joueur
-                nl,
-                displayBoard(TmpBoard), % afficher le nouveau plateau temporaire avec la pièce nouvellement insérée
-                askPieces(Q, TmpBoard, NewBoard) % demander à placer le reste des pièces
+        (isSetupPlaceAllowed(Player, X)
+            ->  (\+ squareTaken([X,Y], Board)
+                    ->  movePiece(Player,Piece, X, Y, Board, TmpBoard, OldPiece), % si la case est libre, alors bouger la pièce sur la case demandée par le joueur
+                        nl,
+                        displayBoard(TmpBoard), % afficher le nouveau plateau temporaire avec la pièce nouvellement insérée
+                        askPieces(Player, Q, TmpBoard, NewBoard) % demander à placer le reste des pièces
+                    ;   write('Case déjà prise.'),
+                        askPieces(Player, [Piece|Q], Board, NewBoard) % la case est déjà prise, le notifier au joueur et lui redemmander où placer ses pièces
+                )
+            ;   write('Vous devez vous placer dans vos deux premières lignes en début de partie.'),
+                askPieces(Player, [Piece|Q], Board, NewBoard) % la case est déjà prise, le notifier au joueur et lui redemmander où placer ses pièces
         ).
 
 % Demander à un joueur de placer ses pièces
 askPlayerPiecesSetUp(Player, Board, NewBoard) :-
         pieces(Player, PlayerPieces), % PlayerPieces = liste des pièces du joueur Player
-        write(PlayerPieces), % afficher la liste des pièces du joueur
-        askPieces(PlayerPieces, Board, NewBoard). % lui demander où les placer sur le plateau de jeu
+        write(PlayerPieces),nl, % afficher la liste des pièces du joueur
+        askPieces(Player, PlayerPieces, Board, NewBoard). % lui demander où les placer sur le plateau de jeu
 
 % Initialiser le plateau de jeu
 initBoard(Board) :-
-        write('Position initiale :'),
+        write('Position initiale :         1▼'),
         nl,
         board(2, InitialBoard), % position au Sud par défaut
         displayBoard(InitialBoard), % afficher le plateau
-        nl, nl,
-        write('Quelle position souhaitez-vous avoir ? (1 : Nord, 2 : Sud(actuel), 3 : Ouest, 4 : Est):'),
         nl,
-        read(WantedPosition), 
+        write('                            2▲'),
+        nl, nl,
+        askPosition(WantedPosition),
         board(WantedPosition, WantedBoard), % Initialiser WantedBoard avec la disposition demandée
+        write('                        Joueur 1 ▼'),
+        nl,
         displayBoard(WantedBoard), % Afficher le plateau avec la disposition demandée
         nl,
-        write('Joueur1 ->'),
+        write('                        Joueur 2 ▲'),
+        nl,
+        write('Placement initial du Joueur 1 ->'),
         nl,
         askPlayerPiecesSetUp(j1, WantedBoard, TmpBoard), % demander au Joueur1 de placer ses pièces et enregistrer le résulat dans TmpBoard
         nl,
-        write('Joueur2 ->'), % demander au Joueur2 de placer ses pièces
+        write('Placement initial du Joueur 2 ->'),
         nl,
         askPlayerPiecesSetUp(j2, TmpBoard, Board). % demander au Joueur2 de placer ses pièces et enregistrer le résulat dans Board
 
