@@ -299,7 +299,7 @@ selectMove(Player, X, Y, Board, NewBoard, OldPiece) :-
                 write('Y : '), read(Y),
                 removePieceFromBoard(Board, Piece, TmpBoard),% enlever la pièce du plateau de jeu
                 (allowedMove(Player, Board, X,Y,Piece),%le déplacement doit être présent dans la liste des coups possibles
-                    movePiece(Player,Piece, X, Y, TmpBoard, NewBoard, OldPiece), victory(Player,OldPiece) %si on arrive pas à placer la pièce sur sa nouvelle position
+                    movePiece(Player,Piece, X, Y, TmpBoard, NewBoard, OldPiece) %si on arrive pas à placer la pièce sur sa nouvelle position
                 ->
                     getInfoPiece(NewBoard,[NewVal,_,_],Piece),
                     retractall(khan(K)),nl,
@@ -489,7 +489,7 @@ run(Board) :-
     displayBoard(NewBoard2), nl,
     run(NewBoard2).
 
-play(Board, Player, NewBoard) :- selectMove(Player, X, Y, Board, NewBoard, OldPiece) , victory(Player,OldPiece).
+play(Board, Player, NewBoard) :- selectMove(Player, X, Y, Board, NewBoard, OldPiece), victory(Player,OldPiece).
 
 main :- % A appeler avec retractall(khan(Y)),asserta(khan(1)),main(_).
     retractall(khan(Y)), % a mettre dans init
