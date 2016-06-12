@@ -5,19 +5,6 @@
 % Prédicats utiles pour la suite
 %
 
-% trouve le minimum dans une liste
-min([X], X) :- !.
-min([X,Y|Tail], N):-
-    ( X > Y ->
-        min([Y|Tail], N)
-    ;
-        min([X|Tail], N)
-    ).
-
-% Donne le joueur adverse
-changePlayer(j1, j2).
-changePlayer(j2, j1).
-
 % declare khan comme un prédicat dynamique
 :- dynamic(khan/1).
 
@@ -333,6 +320,7 @@ selectMove(Player, X, Y, Board, NewBoard, OldPiece) :-
                )).
 
 
+% TODO Vérifier que ca bouffe pas une pièce de son propre camp
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 moveUp(Board, Player,OldPos,[ActualX, ActualY], [NewX,NewY], OldActualPos) :-
         NewX is ActualX - 1,
@@ -477,110 +465,6 @@ forbiddenMove(Board,Player,NewCoord) :- getPiece(Board,NewCoord, OldPiece), isPi
 % initBoard(_) :- board(X), place(X,Y), show_board(Y).
 
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Etape 3
-%
-% Meilleur coup % checker si la kalista prise n'est pas la notre
-%
-
-%comme on cherche le chemin le plus court on va renvoyer une valeur infinie négative pour une victoire
-evaluateSituation(Player,Piece, X, Y, Board, N1,K, N) :-
-    removePieceFromBoard(Board, Piece, TmpBoard),
-    movePiece(Player,Piece, X, Y, TmpBoard, NewBoard, OldPiece),
-    kalista(OldPiece),!, N is -100.
-
-
-% si on ne peut pas prendre la kalista, il s'agit de donner une évaluation du coût du déplacement sur une case en fonction de la posibilité de victoire de l'adversaire -> s'il peut prendre ma kalista je ne bouge pas
-evaluateSituation(Player,Piece, X, Y, Board,N1,K,N) :-
-  removePieceFromBoard(Board, Piece, TmpBoard),
-   movePiece(Player,Piece, X, Y, TmpBoard, NewBoard, OldPiece),
-    getInfoPiece(NewBoard,[NewVal,_,_],Piece),
-    retractall(khan(Z)),nl,
-    asserta(khan(NewVal)) % on met le khan à la nouvelle valeur
-   changePlayer(Player, Opponent),
-    N2 is N1 + 10,
-    (N2 < 30
-        -> bestMove(Opponent,NewBoard, N2,NewVal,N3)
-        ; true),
-    retractall(khan(Z)),nl,
-    asserta(khan(K)),
-    N is N2 + N3.
-
-
-% cherche la valeur min d'une liste'
-min([],Nmin, Nmin) :- !.
-min([[X,Y,N]|T], Nmin, Min):- % lancer avec la valeur Nmin 100
-    N > 30, min(T,Nmin,Min),!.
-
-min([[X,Y,N]|T], Nmin, Min):- % lancer avec la valeur Nmax 100
-    (N < Nmin
-        -> MinTmp is N
-       ;  MinTmp is Nmin
-    ),
-    min(T,MinTmp,Min).
-
-% cherche la valeur max d'une liste'
-max([],Nmax, Nmax) :- !.
-max([[X,Y,N]|T], Nmax, Max):- % lancer avec la valeur Nminmax 0
-    N > 100, max(T,Nmax,Max),!. % tout sauf la valeur qui nous indique qu'on a perdu'
-
-max([[X,Y,N]|T], Nmax, Max):- % lancer avec la valeur Nminmax 0
-    (N > Nmax
-        -> MaxTmp is N
-       ;  MaxTmp is Nmax
-    ),
-    max(T,MaxTmp,Max).
-
-
-% retourne le meilleur coup selon une liste des meilleurs coups
-minmax(BestMovesList,[X,Y]):-
-    min(BestMovesList, 100, Nmin),
-(Nmin > 30 % soit la recherche n'a pas abouti', ou soit on se fait bouffer notre kalista
-    -> max(BestMovesList, 0, Nmax), % on donnera alors le chemin le plus long possible
-        (Nmax = 0
-           -> giveRandomMove(BestMovesList, [X,Y])
-        ; giveMove(Nmax, BestMovesList, [X,Y]))
-    ; giveMove(Nmin, BestMovesList, [X,Y]) % on donnera le chemin le plus court
-    ).
-
-% construction de la BestMovesList contenant tous les coups qui ne sont pas perdants (N < 30): [[X,Y,N]|T]
-evalBestSituation([H|[]], BestMovesList, [[X,Y,N]|BestMovesList], N):-
-    evaluateSituation(Player,Piece, X, Y, Board,N,K), !.
-evalBestSituation([[[X,Y],Val,Piece]|T], BestMovesList,NextBestMovesList],N):-
-    khan(K),
-    evaluateSituation(Player, Piece, X,Y,Board,K,N),
-    evalBestSituation(T,[[X,Y,N]|BestMovesList], NextBestMovesList,N)
-
-
-% donne le meilleur coup à jouer pour un joueur et l'état du plateau à un instant donné
-bestMove(Player, Board, N,N2, [X,Y]):-
-    (N < 30 % on limite ici la recherche à au minimum 3 niveaux (un deplacement coûte 10)
-    -> possibleMovesList(Player,Board, PossibleMovesList),
-    evalBestSituation(PossibleMovesList, [X,Y], N1)
-    ; true),
-    minmax(BestMovesList, [X,Y]),
-    N2 is N1.
-
-
-% donne le meilleur déplacement final
-giveRandomMove([[X,Y,N]|T], [X,Y]):- !. % pas vraiment random pour l'instant...'
-
-giveMove(Nmin, [[X,Y,N]|[]],[X,Y]):- !.
-giveMove(Nmin, [[X,Y,N]|T], [X,Y]):-
-    Nmin = N, !.
-giveMove(Nmin, [[X,Y,N]|T],[NX,NY]) :-
-    giveMove(Nmin, T,[NX,NY]).
-
-
-
-
-
-
-
-
-
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Etape 4
@@ -588,7 +472,7 @@ giveMove(Nmin, [[X,Y,N]|T],[NX,NY]) :-
 % Boucle de jeu
 %
 
-testBoard([[3,[1,kao],2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kar],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,1,3,1,3,1],  [2,2,1,3,2,2]]).
+testBoard([[3,1,2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kar],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,[1,kao],3,1,3,1],  [2,2,1,3,2,2]]).
 
 canPlay(Player, Board) :- possibleMoves(Player, Board,L),\+ empty(L),!.
 canPlay(Player, Board) :- write('Configuration bloquée. Toutes les pièces peuvent être bougées : '), retractall(khan(Y)), asserta(khan(3)), asserta(khan(2)),asserta(khan(1)).
