@@ -510,19 +510,7 @@ generateMove(Player, X, Y, Board, NewBoard, OldPiece) :-
     possibleMoves(Player, Board, MovablePieces),
 
     % Trouve le meilleur coup
-    (\+ findKalistaAtenMove(Player, MovablePieces, PieceMove)
-    ->
-        (\+ findKalistaEatingMove(Player, MovablePieces, PieceMove)
-        ->
-            (\+ findPieceAtenMove(Player, MovablePieces, PieceMove)
-            ->
-                (\+ findPieceEatingMove(Player, MovablePieces, PieceMove)
-                ->
-                    findRandomMove(Player, MovablePieces, PieceMove)
-                )
-            )
-        )
-    ),
+    findRandomMove(Player, MovablePieces, PieceMove),
 
     % Déplace la pièce
     getElementByIndex(0, PieceMove, PieceCoords),
