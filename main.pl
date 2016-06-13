@@ -450,7 +450,7 @@ selectMove(Player, X, Y, Board, NewBoard, OldPiece) :-
 % cherche la valeur min d'une liste'
 min([],Nmin, Nmin) :- !.
 min([[X,Y,N]|T], Nmin, Min):- % lancer avec la valeur Nmin 100
-    N > 30, min(T,Nmin,Min),!.
+    N > 50, min(T,Nmin,Min),!.
 
 min([[X,Y,N]|T], Nmin, Min):- % lancer avec la valeur Nmax 100
     (N < Nmin
@@ -483,7 +483,7 @@ giveMove(Nmin, [[X,Y,N]|T],[NX,NY]) :-
 % retourne le meilleur coup selon une liste des meilleurs coups
 minmax(BestMovesList, [X,Y,N]):-
     min(BestMovesList, 100, Nmin),
-    (Nmin > 30 % soit la recherche n'a pas abouti', ou soit on se fait bouffer notre kalista
+    (Nmin > 50 % soit la recherche n'a pas abouti', ou soit on se fait bouffer notre kalista
     -> max(BestMovesList, 0, Nmax), % on donnera alors le chemin le plus long possible
         (Nmax = 0
            -> giveRandomMove(BestMovesList, [X,Y]), N is Nmax
@@ -495,7 +495,7 @@ minmax(BestMovesList, [X,Y,N]):-
 evaluateSituation(Player, Piece, X, Y, Board, OldN, Khan, NewN) :-
     removePieceFromBoard(Board, Piece, TmpBoard),
     movePiece(Player,Piece, X, Y, TmpBoard, NewBoard, OldPiece),
-    kalista(OldPiece),!, NewN is -100.
+    kalista(OldPiece),NewN is -100,!.
 
 
 % si on ne peut pas prendre la kalista, il s'agit de donner une évaluation du coût du déplacement sur une case en fonction de la posibilité de victoire de l'adversaire -> s'il peut prendre ma kalista je ne bouge pas
@@ -507,10 +507,10 @@ evaluateSituation(Player, Piece, X, Y, Board, OldN, Khan, NewN) :-
     asserta(khan(NewVal)), % on met le khan à la nouvelle valeur
     changePlayer(Player, Opponent),
     N2 is OldN + 10,
-    (N2 < 30
-        -> bestMove(Opponent,NewBoard, N2, N3, _), NewN is N2 + N3
+    (N2 < 50
+        -> displayBoard(NewBoard), bestMove(Opponent,NewBoard, N2, N3, _), NewN is N2 + N3
         ; NewN is N2),
-    retractall(khan(W)),nl,
+    retractall(khan(W)),
     asserta(khan(Khan)).
 
 % construction de la BestMovesList contenant tous les coups qui ne sont pas perdants (N < 30): [[X,Y,N]|T]
@@ -519,7 +519,7 @@ calculateMovesCost(Player, Board, [[[X,Y], Val, Piece]|Q], OldN, CostedPossibleM
     khan(Khan),
     calculateMovesCost(Player, Board, Q, OldN, TmpCostedPossibleMovesList),
     evaluateSituation(Player, Piece, X, Y, Board, OldN, Khan, NewN),
-    append(TmpCostedPossibleMovesList, [X, Y, NewN], CostedPossibleMovesList).
+    append(TmpCostedPossibleMovesList, [[X, Y, NewN]], CostedPossibleMovesList).
 
 flattenPossibleMoves([], []).
 flattenPossibleMoves([PieceMoves|Q], PossibleMovesList) :-
@@ -528,13 +528,14 @@ flattenPossibleMoves([PieceMoves|Q], PossibleMovesList) :-
 
 % donne le meilleur coup à jouer pour un joueur et l'état du plateau à un instant donné
 bestMove(Player, Board, OldN, NewN, [X,Y]):-
-    (OldN < 30 % on limite ici la recherche à au minimum 3 niveaux (un deplacement coûte 10)
-    ->  possibleMoves(Player,Board, MovablePieces),
+    OldN < 50, % on limite ici la recherche à au minimum 3 niveaux (un deplacement coûte 10)
+    possibleMoves(Player,Board, MovablePieces),
         flattenPossibleMoves(MovablePieces, PossibleMovesList),
-        calculateMovesCost(Player, Board, PossibleMovesList, OldN, CostedPossibleMovesList),
-        minmax(BestMovesList, [X,Y]),
-        NewN is OldN
-    ;   true).
+        calculateMovesCost(Player, Board, PossibleMovesList, OldN, CostedPossibleMovesList),nl,
+        minmax(CostedPossibleMovesList, [X,Y,N]),nl,write('Best move for'), write(Player), write(' is '), write([X,Y]),nl,
+        NewN is OldN,!.
+
+bestMove(Player, Board, OldN, OldN, _).
 
 bestMove(Player, Board, [X,Y]):- bestMove(Player, Board, 0, N, [X,Y]).
 
