@@ -536,7 +536,12 @@ max([[X,Y,N,Piece]|T], Nmax, Max):- % lancer avec la valeur Nminmax 0
     max(T,MaxTmp,Max).
 
 % donne le meilleur déplacement final
-giveRandomMove([[X,Y,N,Piece]|T], [X,Y,Piece]):- !. % pas vraiment random pour l'instant...'
+giveRandomMove(BestMovesList, [X,Y,Piece]):-
+    % Choisis une pièce au hasard parmi celles qui peuvent se déplacer
+    length(BestMovesList, CountBestMovesList),
+    random(RandomValue),
+    BestMovesListIndex is floor(RandomValue * CountBestMovesList),
+    getElementByIndex(BestMovesListIndex, BestMovesList, [X,Y,N,Piece]).
 
 giveMove(Nmin, [[X,Y,Nmin,Piece]|_],[X,Y,Piece]):- !.
 giveMove(Nmin, [[X,Y,N,Piece]|T], [NX,NY,NPiece]):-
