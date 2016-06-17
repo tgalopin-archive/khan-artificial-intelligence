@@ -447,12 +447,76 @@ selectMove(Player, X, Y, Board, NewBoard, OldPiece) :-
 % Meilleur coup % checker si la kalista prise n'est pas la notre
 %
 
+% Met en place au hasard les pièces du joueur donné
+randomPlayerPieces(_, [], Board, Board) :- !.
+
+% Joueur 1 : X = 0 ou 1
+randomPlayerPieces(j1, [Piece|Q], Board, NewBoard) :-
+    random(Random),
+    X is floor(Random * 2),
+    length(Q, Length),
+    Y is 5 - Length,
+    movePiece(Player, Piece, X, Y, Board, TmpBoard, OldPiece),
+    randomPlayerPieces(j1, Q, TmpBoard, NewBoard).
+
+% Joueur 2 : X = 4 ou 5
+randomPlayerPieces(j2, [Piece|Q], Board, NewBoard) :-
+    random(Random),
+    X is 5 - floor(Random * 2),
+    length(Q, Length),
+    Y is 5 - Length,
+    movePiece(Player, Piece, X, Y, Board, TmpBoard, OldPiece),
+    randomPlayerPieces(j2, Q, TmpBoard, NewBoard).
+
+% Met en place au hasard les pièces du joueur donné
+randomPlayerSetup(Player, Board, NewBoard) :-
+    pieces(Player, PlayerPieces), % PlayerPieces = liste des pièces du joueur Player
+    randomPlayerPieces(Player, PlayerPieces, Board, NewBoard). % Placer au hasard sur le plateau de jeu
+    
+% Initialiser le plateau de jeu aléatoirement pour un seul des joueurs
+initHumanVsComputerBoard(Board) :-
+    write('Position initiale :     1▼'),
+    nl,
+    board(2, InitialBoard), % position au Sud par défaut
+    displayBoard(InitialBoard), % afficher le plateau
+    nl,
+    write('                        2▲'),
+    nl, nl,
+    askPosition(WantedPosition),
+    board(WantedPosition, WantedBoard), % Initialiser WantedBoard avec la disposition demandée
+    write('                    Joueur 1 ▼'),
+    nl,
+    displayBoard(WantedBoard), % Afficher le plateau avec la disposition demandée
+    nl,
+    write('                    Joueur 2 ▲'),
+    nl,
+    write('Placement initial du Joueur 1 ->'),
+    nl,
+    askPlayerPiecesSetUp(j1, WantedBoard, TmpBoard), % demander au Joueur1 de placer ses pièces et enregistrer le résulat dans TmpBoard
+    nl,
+    randomPlayerSetup(j2, TmpBoard, Board),
+    write('Placement de l''Ordinateur généré aléatoirement'),
+    nl.
+    
+% Initialiser le plateau de jeu aléatoirement
+initComputerVsComputerBoard(Board) :-
+    random(Random),
+    Position is floor(Random * 4) + 1,
+    board(Position, RandomBoard), % Initialise RandomBoard avec le plateau
+    randomPlayerSetup(j1, RandomBoard, TmpBoard),
+    randomPlayerSetup(j2, TmpBoard, Board),
+    write('Plateau généré aléatoirement'),
+    nl.
+
+
+:- dynamic(foundBestMove/1).
+
 % cherche la valeur min d'une liste'
 min([],Nmin, Nmin) :- !.
-min([[X,Y,N]|T], Nmin, Min):- % lancer avec la valeur Nmin 100
-    N > 50, min(T,Nmin,Min),!.
+min([[X,Y,N,Piece]|T], Nmin, Min):- % lancer avec la valeur Nmin 100
+    N > 20, min(T,Nmin,Min),!.
 
-min([[X,Y,N]|T], Nmin, Min):- % lancer avec la valeur Nmax 100
+min([[X,Y,N,Piece]|T], Nmin, Min):- % lancer avec la valeur Nmax 100
     (N < Nmin
         -> MinTmp is N
        ;  MinTmp is Nmin
@@ -461,10 +525,10 @@ min([[X,Y,N]|T], Nmin, Min):- % lancer avec la valeur Nmax 100
 
 % cherche la valeur max d'une liste'
 max([],Nmax, Nmax) :- !.
-max([[X,Y,N]|T], Nmax, Max):- % lancer avec la valeur Nminmax 0
+max([[X,Y,N,Piece]|T], Nmax, Max):- % lancer avec la valeur Nminmax 0
     N > 100, max(T,Nmax,Max),!. % tout sauf la valeur qui nous indique qu'on a perdu'
 
-max([[X,Y,N]|T], Nmax, Max):- % lancer avec la valeur Nminmax 0
+max([[X,Y,N,Piece]|T], Nmax, Max):- % lancer avec la valeur Nminmax 0
     (N > Nmax
         -> MaxTmp is N
        ;  MaxTmp is Nmax
@@ -472,23 +536,23 @@ max([[X,Y,N]|T], Nmax, Max):- % lancer avec la valeur Nminmax 0
     max(T,MaxTmp,Max).
 
 % donne le meilleur déplacement final
-giveRandomMove([[X,Y,N]|T], [X,Y]):- !. % pas vraiment random pour l'instant...'
+giveRandomMove([[X,Y,N,Piece]|T], [X,Y,Piece]):- !. % pas vraiment random pour l'instant...'
 
-giveMove(Nmin, [[X,Y,N]|[]],[X,Y]):- !.
-giveMove(Nmin, [[X,Y,N]|T], [X,Y]):-
+giveMove(Nmin, [[X,Y,N,Piece]|[]],[X,Y,Piece]):- !.
+giveMove(Nmin, [[X,Y,N,Piece]|T], [X,Y,Piece]):-
     Nmin = N, !.
-giveMove(Nmin, [[X,Y,N]|T],[NX,NY]) :-
-    giveMove(Nmin, T,[NX,NY]).
+giveMove(Nmin, [[X,Y,N,Piece]|T],[NX,NY,Piece]) :-
+    giveMove(Nmin, T,[NX,NY,Piece]).
 
 % retourne le meilleur coup selon une liste des meilleurs coups
-minmax(BestMovesList, [X,Y,N]):-
+minmax(BestMovesList, [X,Y,N,Piece]):-
     min(BestMovesList, 100, Nmin),
-    (Nmin > 50 % soit la recherche n'a pas abouti', ou soit on se fait bouffer notre kalista
+    (Nmin > 20 % soit la recherche n'a pas abouti', ou soit on se fait bouffer notre kalista
     -> max(BestMovesList, 0, Nmax), % on donnera alors le chemin le plus long possible
         (Nmax = 0
-           -> giveRandomMove(BestMovesList, [X,Y]), N is Nmax
-        ; giveMove(Nmax, BestMovesList, [X,Y])), N is Nmax
-    ; giveMove(Nmin, BestMovesList, [X,Y]), N is Nmin % on donnera le chemin le plus court
+           -> giveRandomMove(BestMovesList, [X,Y,Piece]), N is Nmax
+        ; giveMove(Nmax, BestMovesList, [X,Y,Piece])), N is Nmax
+    ; giveMove(Nmin, BestMovesList, [X,Y,Piece]), N is Nmin % on donnera le chemin le plus court
     ).
 
 %comme on cherche le chemin le plus court on va renvoyer une valeur infinie négative pour une victoire
@@ -503,12 +567,12 @@ evaluateSituation(Player, Piece, X, Y, Board, OldN, Khan, NewN) :-
     removePieceFromBoard(Board, Piece, TmpBoard),
     movePiece(Player,Piece, X, Y, TmpBoard, NewBoard, OldPiece),
     getInfoPiece(NewBoard,[NewVal,_,_],Piece),
-    retractall(khan(Z)), nl,
+    retractall(khan(Z)),
     asserta(khan(NewVal)), % on met le khan à la nouvelle valeur
     changePlayer(Player, Opponent),
     N2 is OldN + 10,
-    (N2 < 50
-        -> displayBoard(NewBoard), bestMove(Opponent,NewBoard, N2, N3, _), NewN is N2 + N3
+    (N2 < 20
+        -> bestMove(Opponent,NewBoard, N2, N3, _), NewN is N2 + N3
         ; NewN is N2),
     retractall(khan(W)),
     asserta(khan(Khan)).
@@ -519,7 +583,7 @@ calculateMovesCost(Player, Board, [[[X,Y], Val, Piece]|Q], OldN, CostedPossibleM
     khan(Khan),
     calculateMovesCost(Player, Board, Q, OldN, TmpCostedPossibleMovesList),
     evaluateSituation(Player, Piece, X, Y, Board, OldN, Khan, NewN),
-    append(TmpCostedPossibleMovesList, [[X, Y, NewN]], CostedPossibleMovesList).
+    append(TmpCostedPossibleMovesList, [[X, Y, NewN, Piece]], CostedPossibleMovesList).
 
 flattenPossibleMoves([], []).
 flattenPossibleMoves([PieceMoves|Q], PossibleMovesList) :-
@@ -528,12 +592,14 @@ flattenPossibleMoves([PieceMoves|Q], PossibleMovesList) :-
 
 % donne le meilleur coup à jouer pour un joueur et l'état du plateau à un instant donné
 bestMove(Player, Board, OldN, NewN, [X,Y]):-
-    OldN < 50, % on limite ici la recherche à au minimum 3 niveaux (un deplacement coûte 10)
+    OldN < 20, % on limite ici la recherche à au minimum 3 niveaux (un deplacement coûte 10)
     possibleMoves(Player,Board, MovablePieces),
-        flattenPossibleMoves(MovablePieces, PossibleMovesList),
-        calculateMovesCost(Player, Board, PossibleMovesList, OldN, CostedPossibleMovesList),nl,
-        minmax(CostedPossibleMovesList, [X,Y,N]),nl,write('Best move for'), write(Player), write(' is '), write([X,Y]),nl,
-        NewN is OldN,!.
+    flattenPossibleMoves(MovablePieces, PossibleMovesList),
+    calculateMovesCost(Player, Board, PossibleMovesList, OldN, CostedPossibleMovesList),
+    minmax(CostedPossibleMovesList, [X,Y,NewN,Piece]),
+    write('Estimation du coup '), write(Piece), write(' en '), write([X, Y]), nl,
+    asserta(foundBestMove([X,Y,Piece])),
+    NewN is OldN,!.
 
 bestMove(Player, Board, OldN, OldN, _).
 
@@ -541,13 +607,26 @@ bestMove(Player, Board, [X,Y]):- bestMove(Player, Board, 0, N, [X,Y]).
 
 
 
-% Génère le meilleur coup avec minmax
+% Génère le meilleur coup avec minimax
 generateMove(Player, X, Y, Board, NewBoard, OldPiece) :-
-    possibleMoves(Player, Board, MovablePieces),
-    evaluatePieceMoves(Player, MovablePieces, BestMovesList),
-    minmax(BestMovesList, [X, Y]),
+    write('Khan positionné à '), setof(K, khan(K), CurrentKhan), write(CurrentKhan), nl,
+    write('Calcul du meileur coup pour ce joueur en cours ... (cela peut être long)'), nl,
+    bestMove(Player, Board, L),
+    foundBestMove(BestMove), !,
 
-    write(MovablePieces).
+    % Déplace la pièce
+    getElementByIndex(0, BestMove, X),
+    getElementByIndex(1, BestMove, Y),
+    getElementByIndex(2, BestMove, Piece),
+    write('Meilleur coup déterminé : déplacer '), write(Piece), write(' en '), write([X,Y]), nl,
+
+    removePieceFromBoard(Board, Piece, TmpBoard),
+    movePiece(Player, Piece, X, Y, TmpBoard, NewBoard, OldPiece),
+
+    % Nouveau khan
+    getInfoPiece(NewBoard,[NewVal,_,_],Piece),
+    retractall(khan(K)),nl,
+    asserta(khan(NewVal)).
 
 
 
