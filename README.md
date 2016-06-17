@@ -1,5 +1,3 @@
-[main],main(X).
-
 # Game of Khan
 
 The Game of Khan project is an implmentation of a game artificial intelligence in Prolog.
