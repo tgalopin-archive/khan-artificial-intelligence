@@ -538,11 +538,14 @@ max([[X,Y,N,Piece]|T], Nmax, Max):- % lancer avec la valeur Nminmax 0
 % donne le meilleur déplacement final
 giveRandomMove([[X,Y,N,Piece]|T], [X,Y,Piece]):- !. % pas vraiment random pour l'instant...'
 
-giveMove(Nmin, [[X,Y,N,Piece]|[]],[X,Y,Piece]):- !.
-giveMove(Nmin, [[X,Y,N,Piece]|T], [X,Y,Piece]):-
-    Nmin = N, !.
-giveMove(Nmin, [[X,Y,N,Piece]|T],[NX,NY,Piece]) :-
-    giveMove(Nmin, T,[NX,NY,Piece]).
+giveMove(Nmin, [[X,Y,Nmin,Piece]|_],[X,Y,Piece]):- !.
+giveMove(Nmin, [[X,Y,N,Piece]|T], [NX,NY,NPiece]):-
+        giveMove(Nmin, T,[NX,NY,NPiece]).
+
+% giveMove(Nmin, [[X,Y,N,Piece]|T], [X,Y,Piece]):-
+%     write([N,Nmin]), N = Nmin, !.
+% giveMove(Nmin, [[X,Y,N,Piece]|T],[NX,NY,Piece]) :-
+%    giveMove(Nmin, T,[NX,NY,Piece]).
 
 % retourne le meilleur coup selon une liste des meilleurs coups
 minmax(BestMovesList, [X,Y,N,Piece]):-
@@ -590,16 +593,20 @@ flattenPossibleMoves([PieceMoves|Q], PossibleMovesList) :-
     flattenPossibleMoves(Q, TmpPossibleMovesList),
     append(PieceMoves, TmpPossibleMovesList, PossibleMovesList).
 
+found(0,[X,Y,N,Piece]) :- write([X,Y,N,Piece]),write('Estimation du coup '), write(Piece), write(' en '), write([X, Y]), nl, asserta(foundBestMove([X,Y,Piece])), !.
+found(OldN,[X,Y,N,Piece]).
+
 % donne le meilleur coup à jouer pour un joueur et l'état du plateau à un instant donné
 bestMove(Player, Board, OldN, NewN, [X,Y]):-
     OldN < 20, % on limite ici la recherche à au minimum 3 niveaux (un deplacement coûte 10)
     possibleMoves(Player,Board, MovablePieces),
     flattenPossibleMoves(MovablePieces, PossibleMovesList),
     calculateMovesCost(Player, Board, PossibleMovesList, OldN, CostedPossibleMovesList),
-    minmax(CostedPossibleMovesList, [X,Y,NewN,Piece]),
-    write('Estimation du coup '), write(Piece), write(' en '), write([X, Y]), nl,
-    asserta(foundBestMove([X,Y,Piece])),
+    minmax(CostedPossibleMovesList, [X,Y,N,Piece]),
+    found(OldN,[X,Y,N,Piece]),
     NewN is OldN,!.
+
+% bestMove(Player, Board, 0, _, _):- write('Trouve').
 
 bestMove(Player, Board, OldN, OldN, _).
 
