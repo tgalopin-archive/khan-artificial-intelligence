@@ -1,6 +1,6 @@
 {
-  "name": "Game of Khan - IA02 - Titouan Galopin and Nicolas Dejon",
-  "tagline": "Implementation of an artificial intelligence for the Khan game in Prolog (school project)",
+  "name": "IA02 - Game of Khan",
+  "tagline": "Implementation of an artificial intelligence for the Khan game in Prolog by Titouan Galopin and Nicolas Dejon",
   "body": "# Game of Khan\r\n\r\nThe Game of Khan project is an implmentation of a game artificial intelligence in Prolog.\r\nThis projet was done in the context of the IA02 course, at the University of Technology of Compiègne.\r\n\r\n## Running the application\r\n\r\nInstall the GNU Prolog interpretor:\r\n\r\n```\r\nsudo apt-get install gprolog\r\n```\r\n\r\nAnd run the following command :\r\n\r\n```\r\ngprolog\r\n[main],main(X).\r\n```\r\n\r\n## Resources\r\n\r\n- [Project rules](https://github.com/tgalopin/khan-artificial-intelligence/blob/master/res/projet.pdf)\r\n- [Game rules](https://github.com/tgalopin/khan-artificial-intelligence/blob/master/res/regles_khan.pdf)\r\n- [Project report](https://github.com/tgalopin/khan-artificial-intelligence/blob/master/res/rapport.pdf)",
   "note": "Don't delete this file! It's used internally to help with page regeneration."
 }
