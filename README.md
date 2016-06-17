@@ -20,6 +20,6 @@ gprolog
 
 ## Resources
 
-- [Project rules](https://github.com/tgalopin/khan-artificial-intelligence/blob/master/res/projet.pdf)
-- [Game rules](https://github.com/tgalopin/khan-artificial-intelligence/blob/master/res/regles_khan.pdf)
-- [Project report](https://github.com/tgalopin/khan-artificial-intelligence/blob/master/res/rapport.pdf)
+- [Project report](https://github.com/tgalopin/khan-artificial-intelligence/raw/master/res/rapport.pdf)
+- [Project rules](https://github.com/tgalopin/khan-artificial-intelligence/raw/master/res/projet.pdf)
+- [Game rules](https://github.com/tgalopin/khan-artificial-intelligence/raw/master/res/regles_khan.pdf)
