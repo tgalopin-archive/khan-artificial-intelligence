@@ -17,3 +17,9 @@ And run the following command :
 gprolog
 [main],main(X).
 ```
+
+## Resources
+
+- [Project rules](https://github.com/tgalopin/khan-artificial-intelligence/blob/master/res/projet.pdf)
+- [Game rules](https://github.com/tgalopin/khan-artificial-intelligence/blob/master/res/regles_khan.pdf)
+- [Project report](https://github.com/tgalopin/khan-artificial-intelligence/blob/master/res/rapport.pdf)
