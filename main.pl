@@ -514,7 +514,7 @@ initComputerVsComputerBoard(Board) :-
 % cherche la valeur min d'une liste'
 min([],Nmin, Nmin) :- !.
 min([[X,Y,N,Piece]|T], Nmin, Min):- % lancer avec la valeur Nmin 100
-    N > 20, min(T,Nmin,Min),!.
+    N > 30, min(T,Nmin,Min),!.
 
 min([[X,Y,N,Piece]|T], Nmin, Min):- % lancer avec la valeur Nmax 100
     (N < Nmin
@@ -550,7 +550,7 @@ giveMove(Nmin, [[X,Y,N,Piece]|T], [NX,NY,NPiece]):-
 % retourne le meilleur coup selon une liste des meilleurs coups
 minmax(BestMovesList, [X,Y,N,Piece]):-
     min(BestMovesList, 100, Nmin),
-    (Nmin > 20 % soit la recherche n'a pas abouti', ou soit on se fait bouffer notre kalista
+    (Nmin > 30 % soit la recherche n'a pas abouti', ou soit on se fait bouffer notre kalista
     -> max(BestMovesList, 0, Nmax), % on donnera alors le chemin le plus long possible
         (Nmax = 0
            -> giveRandomMove(BestMovesList, [X,Y,Piece]), N is Nmax
@@ -574,7 +574,7 @@ evaluateSituation(Player, Piece, X, Y, Board, OldN, Khan, NewN) :-
     asserta(khan(NewVal)), % on met le khan à la nouvelle valeur
     changePlayer(Player, Opponent),
     N2 is OldN + 10,
-    (N2 < 20
+    (N2 < 30
         -> bestMove(Opponent,NewBoard, N2, N3, _), NewN is N2 + N3
         ; NewN is N2),
     retractall(khan(W)),
@@ -598,7 +598,7 @@ found(OldN,[X,Y,N,Piece]).
 
 % donne le meilleur coup à jouer pour un joueur et l'état du plateau à un instant donné
 bestMove(Player, Board, OldN, NewN, [X,Y]):-
-    OldN < 20, % on limite ici la recherche à au minimum 3 niveaux (un deplacement coûte 10)
+    OldN < 30, % on limite ici la recherche à au minimum 3 niveaux (un deplacement coûte 10)
     possibleMoves(Player,Board, MovablePieces),
     flattenPossibleMoves(MovablePieces, PossibleMovesList),
     calculateMovesCost(Player, Board, PossibleMovesList, OldN, CostedPossibleMovesList),
