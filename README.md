@@ -1,6 +1,6 @@
 # Game of Khan
 
-The Game of Khan project is an implmentation of a game artificial intelligence in Prolog.
+The Game of Khan project is an implementation of a game artificial intelligence in Prolog.
 This projet was done in the context of the IA02 course, at the University of Technology of Compiègne.
 
 ## Running the application
