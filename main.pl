@@ -3,6 +3,22 @@
 % Helpers génériques
 %
 
+% trouve le minimum dans une liste
+min([X], X) :- !.
+min([X,Y|Tail], N):-
+    ( X > Y ->
+        min([Y|Tail], N)
+    ;
+        min([X|Tail], N)
+    ).
+
+% Donne le joueur adverse
+changePlayer(j1, j2).
+changePlayer(j2, j1).
+
+% declare khan comme un prédicat dynamique
+:- dynamic(khan/1).
+
 % Vérifie qu'un élément est vide
 empty(T):- length(T,0).
 empty([H|T]):- empty(H), empty(T).
@@ -427,8 +443,8 @@ selectMove(Player, X, Y, Board, NewBoard, OldPiece) :-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Etape 3
-% 
-% Intelligence artificielle
+%
+% Meilleur coup % checker si la kalista prise n'est pas la notre
 %
 
 % Met en place au hasard les pièces du joueur donné
@@ -493,30 +509,123 @@ initComputerVsComputerBoard(Board) :-
     nl.
 
 
-% Génére le meilleur déplacement
-% 
-% Pour cela, essaie de trouver dans l'ordre :
-%   - un coup nous évitant de perdre
-%   - un coup nous permttant de gagner
-%   - un coup nous évitant de nous faire manger une pièce
-%   - un coup mangeant une pièce adverse
-%
-% Si aucun coup n'est trouvé, un coup au hasard est choisi
+:- dynamic(foundBestMove/1).
+
+% cherche la valeur min d'une liste'
+min([],Nmin, Nmin) :- !.
+min([[X,Y,N,Piece]|T], Nmin, Min):- % lancer avec la valeur Nmin 100
+    N > 20, min(T,Nmin,Min),!.
+
+min([[X,Y,N,Piece]|T], Nmin, Min):- % lancer avec la valeur Nmax 100
+    (N < Nmin
+        -> MinTmp is N
+       ;  MinTmp is Nmin
+    ),
+    min(T,MinTmp,Min).
+
+% cherche la valeur max d'une liste'
+max([],Nmax, Nmax) :- !.
+max([[X,Y,N,Piece]|T], Nmax, Max):- % lancer avec la valeur Nminmax 0
+    N > 100, max(T,Nmax,Max),!. % tout sauf la valeur qui nous indique qu'on a perdu'
+
+max([[X,Y,N,Piece]|T], Nmax, Max):- % lancer avec la valeur Nminmax 0
+    (N > Nmax
+        -> MaxTmp is N
+       ;  MaxTmp is Nmax
+    ),
+    max(T,MaxTmp,Max).
+
+% donne le meilleur déplacement final
+giveRandomMove([[X,Y,N,Piece]|T], [X,Y,Piece]):- !. % pas vraiment random pour l'instant...'
+
+giveMove(Nmin, [[X,Y,Nmin,Piece]|_],[X,Y,Piece]):- !.
+giveMove(Nmin, [[X,Y,N,Piece]|T], [NX,NY,NPiece]):-
+        giveMove(Nmin, T,[NX,NY,NPiece]).
+
+% giveMove(Nmin, [[X,Y,N,Piece]|T], [X,Y,Piece]):-
+%     write([N,Nmin]), N = Nmin, !.
+% giveMove(Nmin, [[X,Y,N,Piece]|T],[NX,NY,Piece]) :-
+%    giveMove(Nmin, T,[NX,NY,Piece]).
+
+% retourne le meilleur coup selon une liste des meilleurs coups
+minmax(BestMovesList, [X,Y,N,Piece]):-
+    min(BestMovesList, 100, Nmin),
+    (Nmin > 20 % soit la recherche n'a pas abouti', ou soit on se fait bouffer notre kalista
+    -> max(BestMovesList, 0, Nmax), % on donnera alors le chemin le plus long possible
+        (Nmax = 0
+           -> giveRandomMove(BestMovesList, [X,Y,Piece]), N is Nmax
+        ; giveMove(Nmax, BestMovesList, [X,Y,Piece])), N is Nmax
+    ; giveMove(Nmin, BestMovesList, [X,Y,Piece]), N is Nmin % on donnera le chemin le plus court
+    ).
+
+%comme on cherche le chemin le plus court on va renvoyer une valeur infinie négative pour une victoire
+evaluateSituation(Player, Piece, X, Y, Board, OldN, Khan, NewN) :-
+    removePieceFromBoard(Board, Piece, TmpBoard),
+    movePiece(Player,Piece, X, Y, TmpBoard, NewBoard, OldPiece),
+    kalista(OldPiece),NewN is -100,!.
+
+
+% si on ne peut pas prendre la kalista, il s'agit de donner une évaluation du coût du déplacement sur une case en fonction de la posibilité de victoire de l'adversaire -> s'il peut prendre ma kalista je ne bouge pas
+evaluateSituation(Player, Piece, X, Y, Board, OldN, Khan, NewN) :-
+    removePieceFromBoard(Board, Piece, TmpBoard),
+    movePiece(Player,Piece, X, Y, TmpBoard, NewBoard, OldPiece),
+    getInfoPiece(NewBoard,[NewVal,_,_],Piece),
+    retractall(khan(Z)),
+    asserta(khan(NewVal)), % on met le khan à la nouvelle valeur
+    changePlayer(Player, Opponent),
+    N2 is OldN + 10,
+    (N2 < 20
+        -> bestMove(Opponent,NewBoard, N2, N3, _), NewN is N2 + N3
+        ; NewN is N2),
+    retractall(khan(W)),
+    asserta(khan(Khan)).
+
+% construction de la BestMovesList contenant tous les coups qui ne sont pas perdants (N < 30): [[X,Y,N]|T]
+calculateMovesCost(_, _, [], _, []).
+calculateMovesCost(Player, Board, [[[X,Y], Val, Piece]|Q], OldN, CostedPossibleMovesList) :-
+    khan(Khan),
+    calculateMovesCost(Player, Board, Q, OldN, TmpCostedPossibleMovesList),
+    evaluateSituation(Player, Piece, X, Y, Board, OldN, Khan, NewN),
+    append(TmpCostedPossibleMovesList, [[X, Y, NewN, Piece]], CostedPossibleMovesList).
+
+flattenPossibleMoves([], []).
+flattenPossibleMoves([PieceMoves|Q], PossibleMovesList) :-
+    flattenPossibleMoves(Q, TmpPossibleMovesList),
+    append(PieceMoves, TmpPossibleMovesList, PossibleMovesList).
+
+found(0,[X,Y,N,Piece]) :- write([X,Y,N,Piece]),write('Estimation du coup '), write(Piece), write(' en '), write([X, Y]), nl, asserta(foundBestMove([X,Y,Piece])), !.
+found(OldN,[X,Y,N,Piece]).
+
+% donne le meilleur coup à jouer pour un joueur et l'état du plateau à un instant donné
+bestMove(Player, Board, OldN, NewN, [X,Y]):-
+    OldN < 20, % on limite ici la recherche à au minimum 3 niveaux (un deplacement coûte 10)
+    possibleMoves(Player,Board, MovablePieces),
+    flattenPossibleMoves(MovablePieces, PossibleMovesList),
+    calculateMovesCost(Player, Board, PossibleMovesList, OldN, CostedPossibleMovesList),
+    minmax(CostedPossibleMovesList, [X,Y,N,Piece]),
+    found(OldN,[X,Y,N,Piece]),
+    NewN is OldN,!.
+
+% bestMove(Player, Board, 0, _, _):- write('Trouve').
+
+bestMove(Player, Board, OldN, OldN, _).
+
+bestMove(Player, Board, [X,Y]):- bestMove(Player, Board, 0, N, [X,Y]).
+
+
+
+% Génère le meilleur coup avec minimax
 generateMove(Player, X, Y, Board, NewBoard, OldPiece) :-
-    nl,
     write('Khan positionné à '), setof(K, khan(K), CurrentKhan), write(CurrentKhan), nl,
-
-    % Trouves toutes les possibilités de mouvement avec le Khan actuel
-    possibleMoves(Player, Board, MovablePieces),
-
-    % Trouve le meilleur coup
-    findRandomMove(Player, MovablePieces, PieceMove),
+    write('Calcul du meileur coup pour ce joueur en cours ... (cela peut être long)'), nl,
+    bestMove(Player, Board, L),
+    foundBestMove(BestMove), !,
 
     % Déplace la pièce
-    getElementByIndex(0, PieceMove, PieceCoords),
-    getElementByIndex(0, PieceCoords, X),
-    getElementByIndex(1, PieceCoords, Y),
-    getElementByIndex(2, PieceMove, Piece),
+    getElementByIndex(0, BestMove, X),
+    getElementByIndex(1, BestMove, Y),
+    getElementByIndex(2, BestMove, Piece),
+    write('Meilleur coup déterminé : déplacer '), write(Piece), write(' en '), write([X,Y]), nl,
 
     removePieceFromBoard(Board, Piece, TmpBoard),
     movePiece(Player, Piece, X, Y, TmpBoard, NewBoard, OldPiece),
@@ -526,39 +635,6 @@ generateMove(Player, X, Y, Board, NewBoard, OldPiece) :-
     retractall(khan(K)),nl,
     asserta(khan(NewVal)).
 
-% Essaie de trouver un coup qui nous permettrait d'éviter de nous faire manger notre kalista
-% Pas implémenté (par manque de temps)
-findKalistaAtenMove(Player, Board, [], PieceMove) :- fail.
-findKalistaAtenMove(Player, Board, [MovablePiece|Q], PieceMove) :- fail.
-
-% Essaie de trouver un coup qui nous permettrait d'éviter de nous faire manger un pion
-% Pas implémenté (par manque de temps)
-findPieceAtenMove(Player, [], PieceMove) :- fail.
-findPieceAtenMove(Player, MovablePieces, PieceMove) :- fail.
-
-% Essaie de trouver un coup mangeant la kalista adverse
-% Pas implémenté (par manque de temps)
-findKalistaEatingMove(Player, Board, [], PieceMove) :- fail.
-findKalistaEatingMove(Player, Board, [MovablePiece|Q], PieceMove) :- fail.
-
-% Essaie de trouver un coup mangeant une pièce adverse
-% Pas implémenté (par manque de temps)
-findPieceEatingMove(Player, [], PieceMove) :- fail.
-findPieceEatingMove(Player, MovablePieces, PieceMove) :- fail.
-
-% Coup au hasard
-findRandomMove(Player, MovablePieces, PieceMove) :-
-    % Choisis une pièce au hasard parmi celles qui peuvent se déplacer
-    length(MovablePieces, CountMovablePieces),
-    random(RandomMovablePiece),
-    MovablePieceIndex is floor(RandomMovablePiece * CountMovablePieces),
-    getElementByIndex(MovablePieceIndex, MovablePieces, PieceMoves),
-
-    % Choisis un déplacement au hasard pour cette pièce
-    length(PieceMoves, CountPieceMoves),
-    random(RandomPieceMove),
-    PieceMoveIndex is floor(RandomPieceMove * CountPieceMoves),
-    getElementByIndex(PieceMoveIndex, PieceMoves, PieceMove).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -575,6 +651,8 @@ victory(Player,OldPiece) :-
     write('*********************************************************************'),     nl,
     break. % arrêt du jeu
 victory(_,_).
+
+testBoard([[3,[1,kao],2,2,3,1], [[2,sr5], 3,[1,sr1],[3,sr2],[1,sr3],[2,sr4]], [[2,kar],[1,so1],[3,so2],[1,so3],[3,so4],[2,so5]],[1,3,2,2,1,3], [3,1,3,1,3,1],  [2,2,1,3,2,2]]).
 
 canPlay(Player, Board) :- possibleMoves(Player, Board,L),\+ empty(L),!.
 canPlay(Player, Board) :- write('Configuration bloquée. Toutes les pièces peuvent être bougées : '), retractall(khan(Y)), asserta(khan(3)), asserta(khan(2)),asserta(khan(1)).
